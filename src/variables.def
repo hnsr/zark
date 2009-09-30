@@ -1,0 +1,59 @@
+// This macro magic allows me to keep the variables I want to expose in one place (this file),
+// instead of  having to maintain the extern declarations, definitions, and array initializers
+// seperately..
+
+#if defined(MAKE_EXTERNDECLS)
+    #define    int_var(name, defval, min, max, description) extern int name;
+    #define  float_var(name, defval, min, max, description) extern float name;
+    #define string_var(name, defval, min, max, description) extern char name[Z_VAR_STRING_SIZE];
+#elif defined(MAKE_DEFINITIONS)
+    #define    int_var(name, defval, min, max, description) int name = (defval);
+    #define  float_var(name, defval, min, max, description) float name = (defval);
+    #define string_var(name, defval, min, max, description) char name[Z_VAR_STRING_SIZE] = (defval);
+#elif defined(MAKE_ARRAYINITS)
+    #define    int_var(name, defval, min, max, description) \
+        {Z_VAR_TYPE_INT,    (void *)(&name), (#name), (description), NULL, (defval), 0.0, min, max, 0.0, 0.0 },
+    #define  float_var(name, defval, min, max, description) \
+        {Z_VAR_TYPE_FLOAT,  (void *)(&name), (#name), (description), NULL, 0, (defval),     0,   0, min, max },
+    #define string_var(name, defval, min, max, description) \
+        {Z_VAR_TYPE_STRING, (void *)name,    (#name), (description), (defval), 0, 0.0,      0,   0, 0.0, 0.0 },
+#else
+    #error Included variables.def without required MAKE_ macro set
+#endif
+
+//         name                            default     min       max  description
+   int_var(r_winwidth,                         600,      1,    99999, "Width of the " PACKAGE_NAME " window. Needs to be set before window is opened.")
+   int_var(r_winheight,                        400,      1,    99999, "Height of the " PACKAGE_NAME " window. Needs to be set before window is opened.")
+   int_var(r_swapinterval,                       0,      0,    99999, "Buffer swap interval (0 = vsync off, 1 = vsync on).")
+   int_var(r_depthbuffer,                        1,      0,        1, "Create OpenGL visual with depth buffer if set to 1.")
+   int_var(r_stencilbuffer,                      1,      0,        1, "Create OpenGL visual with stencil buffer if set to 1.")
+   int_var(r_doublebuffer,                       1,      0,        1, "Create double buffered OpenGL visual if set to 1.")
+   int_var(r_clearcolor,                         0,      0,        1, "Clear color buffer every frame.")
+   int_var(r_mipmap,                             1,      0,        1, "Build mipmaps when loading textures if set to 1.")
+   int_var(r_matdisplaylist,                     1,      0,        1, "Use display lists for material state changes.")
+   int_var(r_shaderlog,                          0,      0,        1, "Print compilation log for compiled shaders even if succesful.")
+   int_var(r_noshaders,                          0,      0,        1, "Prevents use of GLSL shaders when set to 1.")
+ float_var(r_maxfps,                           0.0,    0.0, 999999.0, "Maximum frames per second rendered. Set to 0 to disable FPS limiting.")
+ float_var(r_nearplane,                      0.001, 0.0001, 999999.0, "Distance of near frustrum plane.")
+ float_var(r_farplane,                      1000.0, 0.0001, 999999.0, "Distance of far frustrum plane.")
+ float_var(r_skydepthsize,                    0.05,    0.0,      1.0, "Size of the depthrange used for skybox drawing.")
+ float_var(r_normalscale,                      0.1,    0.0, 999999.0, "Scale factor used when drawing normal vectors.")
+ float_var(r_mipmapbias,                      -0.5,  -10.0,     10.0, "Texture mipmap LOD bias.")
+   int_var(r_nofill,                             0,      0,        1, "Don't draw filled polygons if set to 1.")
+   int_var(r_nosky,                              0,      0,        1, "Don't draw sky if set to 1.")
+   int_var(r_drawaxis,                           0,      0,        1, "Draw XYZ axes if set to 1.")
+   int_var(r_drawwires,                          0,      0,        1, "Draw wireframe if set to 1.")
+   int_var(r_drawvertices,                       0,      0,        1, "Draw vertices if set to 1.")
+   int_var(r_drawtangents,                       0,      0,        1, "Draw tangent vectors if set to 1.")
+   int_var(r_drawnormals,                        0,      0,        1, "Draw normal vectors if set to 1.")
+   int_var(in_debug,                             0,      0,        1, "Debug keyboard/mouse events.")
+   int_var(printdiskload,                        0,      0,        1, "Debug loading of resources.")
+ float_var(m_sensitivity,                      1.0,    0.0, 999999.0, "Mouse sensitivity factor.")
+   int_var(printfps,                             0,      0,        1, "Set this to have FPS printed at fixed intervals.")
+ float_var(printfpstime,                    3000.0,    1.0, 999999.0, "FPS printing interval in milliseconds.")
+ float_var(movespeed,                          1.0,    0.0,  99999.0, "Camera movement speed factor.")
+
+
+#undef int_var
+#undef float_var
+#undef string_var

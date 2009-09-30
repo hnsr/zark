@@ -1,0 +1,22 @@
+// List of symbols that are parsed into integers when parsing non-quoted string arguments in command
+// strings.. makes it easier to efficiently parse arguments for commands like startmove/stopmove.
+
+#ifdef MAKE_ENUM
+    #define cmdargsymbol(identifier, value) Z_CMDARG_##identifier = value,
+#elif defined(MAKE_ARRAY)
+    #define cmdargsymbol(identifier, value) {value, #identifier},
+#endif
+
+cmdargsymbol(INVALID,   0)
+
+cmdargsymbol(TRUE,      1)
+cmdargsymbol(FALSE,     0)
+
+cmdargsymbol(LEFT,      1)
+cmdargsymbol(RIGHT,     2)
+cmdargsymbol(UP,        3)
+cmdargsymbol(DOWN,      4)
+cmdargsymbol(FORWARD,   5)
+cmdargsymbol(BACK,      6)
+
+#undef cmdargsymbol
