@@ -45,4 +45,10 @@ char *zGetUserDir(void);
 // Returns 1 if path exists and is a regular file.
 int zFileExists(char *path);
 
+// Returns strings for each regular file found in under directory 'path' (path is relative to data
+// directory). Returns NULL when no more files are found. This function should only be called in a
+// while loop that terminates when NULL is returned so it can clean up after itself. For ease of
+// use, the string returned is a full path (to be used directly with fopen etc.).
+char *zGetFileFromDir(const char *path);
+
 #endif

@@ -80,6 +80,8 @@
 // Size of array for storing names of recources (meshes, textures, materials etc.)
 #define Z_RESOURCE_NAME_SIZE 128
 
+// Size of buffers for filenames/paths
+#define Z_MAX_PATH 1024
 
 #define Z_FILE_KEYBINDINGS "keybindings.conf"
 #define Z_FILE_AUTOEXEC    "autoexec.conf"

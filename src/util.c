@@ -226,7 +226,7 @@ char *zGetFileExtension(const char *filename)
 
 
 // Rewrite directory separators to native ones in path.
-static void zRewriteDirsep(char *path)
+void zRewriteDirsep(char *path)
 {
     //char *start = path;
     

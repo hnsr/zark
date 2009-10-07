@@ -38,6 +38,8 @@ void zDebug(char *format, ...);
 
 char *zGetFileExtension(const char *filename);
 
+void zRewriteDirsep(char *path);
+
 const char *zGetSiblingPath(const char *filename, const char *sibling);
 
 const char *zGetPath(const char *filename, const char *prefix, int flags);

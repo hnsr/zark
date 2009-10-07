@@ -16,6 +16,7 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <GL/glew.h>
+#include <dirent.h> // opendir etc.
 
 // older versions of glxew.h have a stray 'uint' in them, make sure compiler doesn't error out on it
 // (was only an issue for me with -std=c99)
@@ -1005,17 +1006,97 @@ int zFileExists(char *path)
     struct stat s;
 
     if (stat(path, &s) == 0) {
-        if ( S_ISREG(s.st_mode) ) {
-            //zDebug("%s: \"%s\" is a regular file.", __func__, path);
+
+        if ( S_ISREG(s.st_mode) )
             return 1;
-        } else {
-            //zDebug("%s: \"%s\" is not a regular file.", __func__, path);
+        else
             return 0;
-        }
+
     } else {
-        //zDebug("%s: Failed to stat \"%s\".", __func__, path);
         return 0;
     }
 }
+
+
+
+char *zGetFileFromDir(const char *path)
+{
+    static int start = 1;
+    static DIR *dir;
+    static char path_dir[Z_MAX_PATH];  // Full path to the directory.
+    static char path_file[Z_MAX_PATH]; // Full path to the file inside directory, a pointer to this
+                                       // is returned.
+
+    struct dirent *entry;
+
+    // When called for the first time for a new directory, build the full path to the directory and
+    // open a directory stream.
+    if (start) {
+
+        // Append dirsep + path + dirsep to data dir, be sure it fits..
+        if ( (strlen(path) + strlen(Z_DIR_SYSDATA) + 1) > (Z_MAX_PATH-1) ) {
+            zWarning("Failed to open directory \"%s\", path length exceeded Z_MAX_PATH.", path);
+            return NULL;
+        }
+        path_dir[0] = '\0';
+        strcat(path_dir, Z_DIR_SYSDATA);
+        strcat(path_dir, Z_DIR_SEPARATOR);
+        strcat(path_dir, path);
+        strcat(path_dir, Z_DIR_SEPARATOR);
+
+        // Make sure we use native directory separators, only really needed for path, but I need to
+        // work on a copy of it, so this is easier..
+        zRewriteDirsep(path_dir);
+
+        dir = opendir(path_dir);
+        if (!dir) {
+            zWarning("Failed to open directory \"%s\".", path_dir);
+            return NULL;
+        }
+        start = 0;
+    }
+
+    // Keep reading direntries from dir until we hit a regular file, or if end of directory is
+    // reached.
+    while ( (entry = readdir(dir)) ) {
+
+        struct stat s;
+
+        // Entry filename is relative to the directory we opened, so append it to path_dir.
+        if ( (strlen(path_dir) + strlen(entry->d_name)) > (Z_MAX_PATH-1) ) {
+            zWarning("zGetFileFromDir: Failed to build path for file \"%s\" and path \"%s\","
+                " skipping.", entry->d_name, path_dir);
+            continue;
+        }
+        path_file[0] = '\0';
+        strcat(path_file, path_dir);
+        strcat(path_file, entry->d_name);
+
+        // stat file to see if it is a regular file.
+        if (stat(path_file, &s) == 0) {
+
+            if ( S_ISREG(s.st_mode) )
+                break;
+            else
+                continue;
+
+        } else {
+
+            // Failed to stat, emit warning and continue happily.
+            zWarning("zGetFileFromDir: Failed to stat file \"%s\".", path_file);
+            continue;
+        }
+    }
+
+    // If entry is still NULL we reached end of directory.
+    if ( !entry ) {
+        closedir(dir);
+        start = 1;
+        return NULL;
+    }
+
+    return path_file;
+}
+
 
 
