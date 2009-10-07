@@ -288,10 +288,11 @@ const char *zGetSiblingPath(const char *filename, const char *sibling)
 
 
 
-// Construct path for given filename and prefix. If try_user is set, construct path using user data
-// directory and check if it exists, else construct path using system data directory (without
-// checking wether or not it exists). The returned string is statically allocated and should not be
-// freed. It will be modified on the next call and should be copied if it needs to be retained.
+// Construct a full path for given filename and prefix, prepending either the user or system data
+// directory to it; if TRY_USER is specified in flags, an extra check is done to see if the
+// requested filename/prefix exists in the user data directory, and if so, that path is returned,
+// else it is returned for the system data directory (without checking wether or not it exists). The
+// returned string is statically allocated, should not be freed, and is modified on the next call.
 // Returns NULL if the path was too long (>Z_PATH_MAXLEN).
 const char *zGetPath(const char *filename, const char *prefix, int flags)
 {
