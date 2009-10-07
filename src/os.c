@@ -939,10 +939,10 @@ void zShutdown(void)
 }
 
 
-#define USERDIR_MAX 1024
+
 char *zGetUserDir(void)
 {
-    static char userdir[USERDIR_MAX];
+    static char userdir[Z_MAX_PATH];
     static int initialized;
 
     if (!initialized) {
@@ -953,7 +953,7 @@ char *zGetUserDir(void)
         // Lookup homedir. Try HOME env var first, or getentpw if that fails.
         if ( (env_home = getenv("HOME")) && (len = strlen(env_home)) ) {
 
-            if (len < USERDIR_MAX)
+            if (len < Z_MAX_PATH)
                 strcat(userdir, env_home);
             else
                 zWarning("Home directory from $HOME exceeded buffer size, using empty string");
@@ -965,7 +965,7 @@ char *zGetUserDir(void)
 
                 if (pwd->pw_dir && (len = strlen(pwd->pw_dir)) ) {
 
-                    if (len < USERDIR_MAX)
+                    if (len < Z_MAX_PATH)
                         strcat(userdir, pwd->pw_dir);
                     else
                         zWarning("Home directory from passwd entry exceeded buffer size, using"
@@ -982,7 +982,7 @@ char *zGetUserDir(void)
         }
         
         // Append app name.
-        if ( (strlen(userdir) + strlen(Z_DIR_USERDATA) + 1) < USERDIR_MAX ) {
+        if ( (strlen(userdir) + strlen(Z_DIR_USERDATA) + 1) < Z_MAX_PATH ) {
             strcat(userdir, Z_DIR_SEPARATOR);
             strcat(userdir, Z_DIR_USERDATA);
         } else {

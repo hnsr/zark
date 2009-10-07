@@ -246,18 +246,16 @@ void zRewriteDirsep(char *path)
 }
 
 
-#define Z_PATH_MAXLEN 1024
-
 
 // Construct path using base path component of filename, with sibling appended to it. See zGetPath
 // on how to treat returned string.
 const char *zGetSiblingPath(const char *filename, const char *sibling)
 {
-    static char path[Z_PATH_MAXLEN];
+    static char path[Z_MAX_PATH];
     int basename_start = 0;
     const char *s = filename;
 
-    if (strlen(filename) >= Z_PATH_MAXLEN) {
+    if (strlen(filename) >= Z_MAX_PATH) {
         zError("%s: File path too long.", __func__);
         return NULL;
     }
@@ -276,7 +274,7 @@ const char *zGetSiblingPath(const char *filename, const char *sibling)
     path[basename_start] = '\0';
 
     // Check that there's enough room to append sibling to path
-    if ( (strlen(sibling) + strlen(path)) >= Z_PATH_MAXLEN) {
+    if ( (strlen(sibling) + strlen(path)) >= Z_MAX_PATH) {
         zError("%s: File path too long.", __func__);
         return NULL;
     }
@@ -293,10 +291,10 @@ const char *zGetSiblingPath(const char *filename, const char *sibling)
 // requested filename/prefix exists in the user data directory, and if so, that path is returned,
 // else it is returned for the system data directory (without checking wether or not it exists). The
 // returned string is statically allocated, should not be freed, and is modified on the next call.
-// Returns NULL if the path was too long (>Z_PATH_MAXLEN).
+// Returns NULL if the path was too long (>Z_MAX_PATH).
 const char *zGetPath(const char *filename, const char *prefix, int flags)
 {
-    static char path[Z_PATH_MAXLEN];
+    static char path[Z_MAX_PATH];
     char *userdir = zGetUserDir();
     size_t reqsize = 0;
 
@@ -308,12 +306,12 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
     // Try looking for file in user direcotry first if desired.
     if (flags & Z_FILE_TRYUSER) {
 
-        // Check that the full path doesn't exceed Z_PATH_MAXLEN.
+        // Check that the full path doesn't exceed Z_MAX_PATH.
         reqsize += strlen(userdir) + 1; // +1 for directory separator.
         if (prefix && strlen(prefix) > 0) reqsize += strlen(prefix) + 1;
         reqsize += strlen(filename);
 
-        if (reqsize >= Z_PATH_MAXLEN) {
+        if (reqsize >= Z_MAX_PATH) {
             zError("%s: Resulting file path too long for file \"%s\" with prefix \"%s\".", __func__,
                 filename, prefix);
             return NULL;
@@ -345,7 +343,7 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
     if (prefix && strlen(prefix) > 0) reqsize += strlen(prefix) + 1;
     reqsize += strlen(filename);
 
-    if (reqsize >= Z_PATH_MAXLEN) {
+    if (reqsize >= Z_MAX_PATH) {
         zError("%s: Resulting file path too long for file \"%s\" with prefix \"%s\".", __func__,
             filename, prefix);
         return NULL;
