@@ -3,7 +3,7 @@
 # (re)generate autoconf/make stuff
 
 aclocal -I m4
-#autoheader
+autoheader
 autoconf
 
 # Prevent automake from erroring out on missing build-aux dir
