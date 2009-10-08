@@ -1,5 +1,5 @@
 dnl Initialize autoconf
-AC_INIT([zark],[0.1],[h.nieser@xs4all.nl])
+AC_INIT([zark],[0.1],[hnsr@xs4all.nl])
 
 dnl Try to keep as much autoconf stuff as possible out of the root dir..
 AC_CONFIG_AUX_DIR([build-aux])
