@@ -92,6 +92,8 @@ void zMaterialInit(void);
 
 void zMaterialDeinit(void);
 
+void zMaterialInfo(ZMaterial *mtl);
+
 ZMaterial *zLookupMaterial(const char *name);
 
 void zIterMaterials(void (*iter)(ZMaterial *, void *), void *data);

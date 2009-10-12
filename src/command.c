@@ -392,14 +392,14 @@ int zCmdListVars(const ZParsedCommand *pcmd)
 static void zCmdListMatsCB(ZMaterial *mat, void *data)
 {
     if (mat->is_resident)
-        zPrint("  * %s\n", mat->name);
+        zPrint("  %s (resident)\n", mat->name);
     else
-        zPrint("    %s\n", mat->name);
+        zPrint("  %s\n", mat->name);
 }
 
 int zCmdListMats(const ZParsedCommand *pcmd)
 {
-    zPrint("Listing all materials (materials marked * are resident):\n");
+    zPrint("Listing all materials:\n");
 
     zIterMaterials(zCmdListMatsCB, NULL);
 
@@ -411,7 +411,7 @@ int zCmdListMats(const ZParsedCommand *pcmd)
 
 static void zCmdListTexturesCB(ZTexture *tex, void *data)
 {
-    zPrint("    %s\n", tex->name);
+    zPrint("  %s\n", tex->name);
 }
 
 int zCmdListTextures(const ZParsedCommand *pcmd)
@@ -426,12 +426,12 @@ int zCmdListTextures(const ZParsedCommand *pcmd)
 static void zCmdListMeshesCB(ZMesh *mesh, void *data)
 {
     ZMaterial *cur = mesh->materials;
-    zPrint("    %s\n", mesh->name);
+    zPrint("  %s\n", mesh->name);
 
     if (cur) {
-        zPrint("      local materials:\n");
+        zPrint("    local materials:\n");
         while (cur) {
-            zPrint("        %s\n", cur->name);
+            zPrint("      %s\n", cur->name);
             cur = cur->next;
         }
     }
@@ -448,13 +448,13 @@ int zCmdListMeshes(const ZParsedCommand *pcmd)
 
 static void zCmdListShaderProgramsCB(ZShaderProgram *program, void *data)
 {
-    zPrint("    %s / %s, flags = %#x\n", program->vertex_shader, program->fragment_shader,
+    zPrint("  %s / %s, flags = %#x\n", program->vertex_shader, program->fragment_shader,
         program->flags);
 }
 
 static void zCmdListShadersCB(ZShader *shader, void *data)
 {
-    zPrint("    %s, flags = %#x\n", shader->name, shader->flags);
+    zPrint("  %s, flags = %#x\n", shader->name, shader->flags);
 }
 
 int zCmdListShaders(const ZParsedCommand *pcmd)
@@ -543,6 +543,24 @@ int zCmdSceneInfo(const ZParsedCommand *pcmd)
     return 1;
 }
 
+
+
+int zCmdMaterialInfo(const ZParsedCommand *pcmd)
+{
+    ZMaterial *mtl;
+
+    // zLookupMesh has a side-effect of actually loading the mesh if not currently loaded. Not sure
+    // if that is sensible, but it doesn't really hurt either with meshinfo being mostly a debugging
+    // command..
+    if (!(mtl = zLookupMaterial(pcmd->args[0].str_arg))) {
+        zError("No material named \"%s\" found.", pcmd->args[0].str_arg);
+        return 0;
+    }
+
+    zMaterialInfo(mtl);
+
+    return 1;
+}
 
 
 int zCmdMeshInfo(const ZParsedCommand *pcmd)
@@ -1027,6 +1045,8 @@ ZCommand commands[] = {
         { NULL } },
     { zCmdSceneInfo,       "sceneinfo",       0, 0, "Display info for the current scene.",
         { NULL } },
+    { zCmdMaterialInfo,    "mtlinfo",         1, 1, "Display info for a material.",
+        { "Material name" } },
     { zCmdMeshInfo,        "meshinfo",        1, 1, "Display info for a loaded mesh.",
         { "Mesh name" } },
     { zCmdBindKey,         "bindkey",         2, 2, "Bind key to a command string.",

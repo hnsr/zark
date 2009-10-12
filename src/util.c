@@ -197,6 +197,17 @@ void zDebug(char *format, ...)
 #endif
 
 
+const char *zGetColorString(float *color)
+{
+    static char color_string[64];
+
+    // This could, in theory, overflow the buffer, could use snprintf but not sure if I get that on
+    // win32 (c99)..
+    sprintf(color_string, "{ %.2f, %.2f, %.2f, %.2f }", color[0], color[1], color[2], color[3]);
+
+    return color_string;
+}
+
 
 // Returns a pointer that starts at the first character of the file extension in filename, or if no
 // extension is found, to the trailing null byte (i.e. an empty string).

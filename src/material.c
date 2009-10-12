@@ -126,6 +126,55 @@ void zMaterialDeinit(void)
 
 
 
+// Print some info on material.
+void zMaterialInfo(ZMaterial *mtl)
+{
+    assert(mtl);
+
+    zPrint("Dumping info on material \"%s\":\n", mtl->name);
+
+    if (mtl->is_resident) zPrint("  resident:        yes\n");
+    else                  zPrint("  resident:        no\n");
+
+    zPrint("  flags:           ");
+    if (mtl->flags & Z_MTL_FRESNEL) zPrint("fresnel ");
+    zPrint("(%#x)\n", mtl->flags);
+
+    zPrint("  blending type:   ");
+    if      (mtl->blend_type == Z_MTL_BLEND_NONE)  zPrint("none\n");
+    else if (mtl->blend_type == Z_MTL_BLEND_ALPHA) zPrint("alpha\n");
+    else if (mtl->blend_type == Z_MTL_BLEND_ADD)   zPrint("additive\n");
+    else zPrint("unknown?\n");
+
+    zPrint("  ambient_color:   %s\n", zGetColorString(mtl->ambient_color));
+    zPrint("  diffuse_color:   %s\n", zGetColorString(mtl->diffuse_color));
+    zPrint("  specular_color:  %s\n", zGetColorString(mtl->specular_color));
+    zPrint("  emission_color:  %s\n", zGetColorString(mtl->emission_color));
+    zPrint("  shininess:       %.2f\n", mtl->shininess);
+
+    zPrint("  texture wrap:    ");
+    if      (mtl->wrap_mode & Z_TEX_WRAP_REPEAT)    zPrint("repeat\n");
+    else if (mtl->wrap_mode & Z_TEX_WRAP_CLAMP)     zPrint("clamp\n");
+    else if (mtl->wrap_mode & Z_TEX_WRAP_CLAMPEDGE) zPrint("clampedge\n");
+    else zPrint("unknown?\n");
+
+    if (mtl->min_filter == Z_TEX_FILTER_NEAREST) zPrint("  min filter:      nearest\n");
+    if (mtl->min_filter == Z_TEX_FILTER_LINEAR)  zPrint("  min filter:      linear\n");
+
+    if (mtl->mag_filter == Z_TEX_FILTER_NEAREST) zPrint("  mag filter:      nearest\n");
+    if (mtl->mag_filter == Z_TEX_FILTER_LINEAR)  zPrint("  mag filter:      linear\n");
+
+    zPrint("  diffuse map:     %s\n", mtl->diffuse_map_name);
+    zPrint("  normal map:      %s\n", mtl->normal_map_name);
+    zPrint("  specular map:    %s\n", mtl->specular_map_name);
+    zPrint("  vertex shader:   %s\n", mtl->vertex_shader);
+    zPrint("  fragment shader: %s\n", mtl->fragment_shader);
+
+    zPrint("\n");
+}
+
+
+
 // Iterate over each material and call iter with it.
 void zIterMaterials(void (*iter)(ZMaterial *, void *), void *data)
 {

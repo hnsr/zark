@@ -98,6 +98,7 @@ void zSceneInfo(ZScene *scene)
         zPrint("  posable %d: %s\n", i, zPosableInfo(postmp));
     }
 
+    zPrint("\n");
 }
 
 

@@ -623,7 +623,8 @@ void zMeshInfo(ZMesh *mesh)
     zPrint("  %u vertices (%u bytes)\n", mesh->num_vertices, mesh->num_vertices * mesh->elem_size *
          sizeof(float));
 
-    zPrint("  %u indices (%u bytes)\n", mesh->num_indices, mesh->num_indices * sizeof(unsigned int));
+    zPrint("  %u indices (%u bytes)\n", mesh->num_indices,
+        mesh->num_indices * sizeof(unsigned int));
 
     if (mesh->flags & Z_MESH_HAS_NORMALS)   zPrint("  mesh has normals\n");
     if (mesh->flags & Z_MESH_HAS_TEXCOORDS) zPrint("  mesh has texcoords\n");
@@ -636,20 +637,7 @@ void zMeshInfo(ZMesh *mesh)
             ZMaterial *mat = mesh->groups[i].material;
             zPrint("    %u: material %s, start %u, count %u\n", i, mat->name,
                 mesh->groups[i].start, mesh->groups[i].count);
-            zPrint("      ambient: %f %f %f %f\n", *(mat->ambient_color),
-                                                   *(mat->ambient_color+1),
-                                                   *(mat->ambient_color+2),
-                                                   *(mat->ambient_color+3));
-            zPrint("      diffuse: %f %f %f %f\n", *(mat->diffuse_color),
-                                                   *(mat->diffuse_color+1),
-                                                   *(mat->diffuse_color+2),
-                                                   *(mat->diffuse_color+3));
-            zPrint("      specular: %f %f %f %f\n", *(mat->specular_color),
-                                                    *(mat->specular_color+1),
-                                                    *(mat->specular_color+2),
-                                                    *(mat->specular_color+3));
         }
-
     } else {
         zPrint("  no groups\n");
     }

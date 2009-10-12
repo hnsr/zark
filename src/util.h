@@ -16,6 +16,7 @@
                                 // definitions, console commands).
 
 
+// Debugging stuff
 void zPrintCurrentMVMatrix(void);
 
 void zPrintInputStuff(unsigned int what);
@@ -35,7 +36,10 @@ void zWarning(char *format, ...);
 void zDebug(char *format, ...);
 #endif
 
+const char *zGetColorString(float *color);
 
+
+// File stuff
 char *zGetFileExtension(const char *filename);
 
 void zRewriteDirsep(char *path);
@@ -50,8 +54,8 @@ char *zGetStringFromFile(const char *filename);
 
 
 
+// Misc stuff
 unsigned int zHashString(const char *str, int tablesize);
-
 
 int zUTF8IsPrintable(const char *str);
 
