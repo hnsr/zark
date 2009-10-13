@@ -14,7 +14,7 @@
 // Texture parameters.
 #define Z_TEX_WRAP_REPEAT       1
 #define Z_TEX_WRAP_CLAMP        2
-#define Z_TEX_WRAP_CLAMPEDGE    4
+#define Z_TEX_WRAP_CLAMPEDGE    3
 
 #define Z_TEX_FILTER_NEAREST    1
 #define Z_TEX_FILTER_LINEAR     2
@@ -103,6 +103,8 @@ void zMakeMaterialResident(ZMaterial *mat);
 void zMakeMaterialNonResident(ZMaterial *mat, void *ignored);
 
 void zMakeMaterialActive(ZMaterial *mat);
+
+ZMaterial *zNewMaterial(void);
 
 ZMaterial *zCopyMaterial(ZMaterial *mat);
 

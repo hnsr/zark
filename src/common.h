@@ -102,6 +102,7 @@
 #include "variables.h"
 #include "command.h"
 #include "console.h"
+#include "script.h"
 
 
 #endif

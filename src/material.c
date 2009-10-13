@@ -4,6 +4,10 @@
 #include <assert.h>
 #include <string.h>
 
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+
 #include "common.h"
 
 
@@ -48,6 +52,7 @@ static int zAddMaterial(ZMaterial *mat)
     unsigned int i;
 
     assert(mat->next == NULL);
+    assert(strlen(mat->name)); // Makes no sense to add a material without a name.
 
     if (zLookupMaterial(mat->name)) {
         zWarning("%s: Material \"%s\" already exists.", __func__,
@@ -64,45 +69,93 @@ static int zAddMaterial(ZMaterial *mat)
 
 
 
+// This gets called from lua with a table as argument. Sort out the parameters and add a new
+// material.
+static int zLuaMaterial(lua_State *L)
+{
+    ZMaterial *newmtl;
+
+    if (!lua_istable(L, -1)) return luaL_error(L, "bad syntax, table expected");
+
+    // Clone default material and copy over name.
+    if ( !(newmtl = zNewMaterial()) ) {
+        zError("zLuaMaterial: Failed to allocate new material");
+        return 0;
+    }
+
+    // Get name, this is the one required field..
+    if (!zLuaGetDataString(L, "name", newmtl->name, Z_RESOURCE_NAME_SIZE)) {
+        zLuaWarning(L, "no valid name given for material, ignoring.");
+        zDeleteMaterial(newmtl);
+        return 0;
+    }
+
+    zLuaGetDataUint  (L, "flags",             &(newmtl->flags));
+    zLuaGetDataUint  (L, "blend_type",        &(newmtl->blend_type));
+    zLuaGetDataFloats(L, "ambient_color",       newmtl->ambient_color,  4);
+    zLuaGetDataFloats(L, "diffuse_color",       newmtl->diffuse_color,  4);
+    zLuaGetDataFloats(L, "specular_color",      newmtl->specular_color, 4);
+    zLuaGetDataFloats(L, "emission_color",      newmtl->emission_color, 4);
+    zLuaGetDataFloats(L, "shininess",         &(newmtl->shininess),     1);
+    zLuaGetDataUchar (L, "wrap_mode",         &(newmtl->wrap_mode));
+    zLuaGetDataUchar (L, "min_filter",        &(newmtl->min_filter));
+    zLuaGetDataUchar (L, "mag_filter",        &(newmtl->mag_filter));
+    zLuaGetDataString(L, "diffuse_map_name",    newmtl->diffuse_map_name,  Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataString(L, "normal_map_name",     newmtl->normal_map_name,   Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataString(L, "specular_map_name",   newmtl->specular_map_name, Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataString(L, "vertex_shader",       newmtl->vertex_shader,     Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataString(L, "fragment_shader",     newmtl->fragment_shader,   Z_RESOURCE_NAME_SIZE);
+
+    // Add material to hash table.
+    if (!zAddMaterial(newmtl)) {
+        zWarning("Failed to add material \"%s\".", newmtl->name);
+        zDeleteMaterial(newmtl);
+    }
+    return 0;
+}
+
+
+
 // Load materials from material description files.
 void zLoadMaterials(void)
 {
-    ZMaterial *tmp;
-    static ZMaterial dummy_material = {
-        { 'd', 'u', 'm', 'm', 'y', '\0' },
-        0, 0, 0,
-        { 0.1f, 0.1f, 0.1f, 1.0f },
-        { 1.0f, 1.0f, 1.0f, 1.0f },
-        { 1.0f, 1.0f, 1.0f, 1.0f },
-        { 0.0f, 0.0f, 0.0f, 1.0f },
-        80.0f,
-        Z_TEX_WRAP_REPEAT, Z_TEX_FILTER_LINEAR, Z_TEX_FILTER_LINEAR,
-        {'t','e','x','t','u','r','e','s','/','d','u','m','m','y','.','p','n','g'}, {'\0'}, {'\0'},
-        NULL, NULL, NULL,
-        {'\0'}, {'\0'}, NULL,
-        0,
-        NULL
-    };
+    char *file;
+    lua_State *L;
 
+    // Crerate temporary lua state.
+    L = lua_open();
 
-    // TODO: Open datadir/materials directory, load each file with .mtl extension, add to hash
-    // table.
-    // XXX: When I do this, be sure to ignore materials of which the name exceeds
-    // Z_RESOURCE_NAME_SIZE-1.
+    // Expose functions, enums/bitflags etc
+    lua_register(L, "material", zLuaMaterial);
+    lua_pushinteger(L, Z_MTL_FRESNEL);        lua_setglobal(L, "FRESNEL");
+    lua_pushinteger(L, Z_MTL_BLEND_NONE);     lua_setglobal(L, "BLEND_NONE");
+    lua_pushinteger(L, Z_MTL_BLEND_ALPHA);    lua_setglobal(L, "BLEND_ALPHA");
+    lua_pushinteger(L, Z_MTL_BLEND_ADD);      lua_setglobal(L, "BLEND_ADD");
+    lua_pushinteger(L, Z_TEX_WRAP_REPEAT);    lua_setglobal(L, "WRAP_REPEAT");
+    lua_pushinteger(L, Z_TEX_WRAP_CLAMP);     lua_setglobal(L, "WRAP_CLAMP");
+    lua_pushinteger(L, Z_TEX_WRAP_CLAMPEDGE); lua_setglobal(L, "WRAP_CLAMPEDGE");
+    lua_pushinteger(L, Z_TEX_FILTER_NEAREST); lua_setglobal(L, "FILTER_NEAREST");
+    lua_pushinteger(L, Z_TEX_FILTER_LINEAR);  lua_setglobal(L, "FILTER_LINEAR");
 
-    // For now I just add a dummy material.
-    tmp = zCopyMaterial(&dummy_material);
+    // Run every material library through lua.
+    while ( (file = zGetFileFromDir("materials")) ) {
 
-    if (!tmp) {
-        zError("Failed to load materials (couldn't allocate memory).");
-        return;
+        int err;
+
+        if (strcasecmp(zGetFileExtension(file), "mtl") != 0) continue;
+
+        //zDebug("Loading materials from %s", file);
+        err = luaL_dofile(L, file);
+
+        if (err) {
+            // XXX: This doesn't (always?) print source filename/linenumber, why?
+            zWarning("lua: %s", lua_tostring(L, -1));
+            lua_pop(L, 1);
+        }
+
     }
 
-    if (!zAddMaterial(tmp)) {
-
-        zWarning("Failed to add dummy material.");
-        zDeleteMaterial(tmp);
-    }
+    lua_close(L);
 }
 
 
@@ -201,7 +254,7 @@ ZMaterial *zLookupMaterial(const char *name)
     ZMaterial *cur;
 
     assert(name);
-    assert(strlen(name) > 0);
+    assert(strlen(name));
 
     i = zHashString(name, Z_MTL_HASH_SIZE);
     cur = materials[i];
@@ -470,6 +523,36 @@ void zMakeMaterialActive(ZMaterial *mat)
 
   
     previous_mat = mat;
+}
+
+
+
+// Create a new empty/basic material with some neutral defaults so it can be used as a base for
+// user-defined materials.
+ZMaterial *zNewMaterial(void)
+{
+    ZMaterial *new;
+
+    new = malloc(sizeof(ZMaterial));
+
+    if (!new) return NULL;
+
+    memset(new, '\0', sizeof(ZMaterial));
+
+    zSetFloat4(new->ambient_color,  1.0f, 1.0f, 1.0f, 1.0f);
+    zSetFloat4(new->diffuse_color,  1.0f, 1.0f, 1.0f, 1.0f);
+    zSetFloat4(new->specular_color, 1.0f, 1.0f, 1.0f, 1.0f);
+    zSetFloat4(new->emission_color, 0.0f, 0.0f, 0.0f, 1.0f);
+
+    new->blend_type = Z_MTL_BLEND_NONE;
+    new->shininess  = 80.0f;
+    new->wrap_mode  = Z_TEX_WRAP_REPEAT;
+    new->min_filter = Z_TEX_FILTER_LINEAR;
+    new->mag_filter = Z_TEX_FILTER_LINEAR;
+
+    // XXX: Maybe use gouraud shader by default? since ff shading is borked at the moment..
+
+    return new;
 }
 
 
