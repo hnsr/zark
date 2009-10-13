@@ -806,10 +806,6 @@ static ZMaterial *lookup_material(const char *name)
         cur = cur->next;
     }
 
-    //zDebug("Failed to looking material \"%s\" for mesh %s in local list, trying global lookup.",
-    //    name, filename);
-
-    // FIXME: This look-up doesn't seem to work, maybe I am loaded meshes before loading materials?
     // If that fails use global list.
     if ( (cur = zLookupMaterial(name)) ) {
         return cur;

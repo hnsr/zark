@@ -66,9 +66,9 @@ int zMain(int argc, char** argv)
     ilInit();
     iluInit();
 
+    zLoadMaterials();
     zLoadCommands(Z_FILE_AUTOEXEC);
     zLoadKeyBindings(Z_FILE_KEYBINDINGS);
-    zLoadMaterials();
 
     zOpenWindow(r_winwidth, r_winheight);
 
