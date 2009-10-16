@@ -90,21 +90,21 @@ static int zLuaMaterial(lua_State *L)
         return 0;
     }
 
-    zLuaGetDataUint  (L, "flags",             &(newmtl->flags));
-    zLuaGetDataUint  (L, "blend_type",        &(newmtl->blend_type));
-    zLuaGetDataFloats(L, "ambient_color",       newmtl->ambient_color,  4);
-    zLuaGetDataFloats(L, "diffuse_color",       newmtl->diffuse_color,  4);
-    zLuaGetDataFloats(L, "specular_color",      newmtl->specular_color, 4);
-    zLuaGetDataFloats(L, "emission_color",      newmtl->emission_color, 4);
-    zLuaGetDataFloats(L, "shininess",         &(newmtl->shininess),     1);
-    zLuaGetDataUchar (L, "wrap_mode",         &(newmtl->wrap_mode));
-    zLuaGetDataUchar (L, "min_filter",        &(newmtl->min_filter));
-    zLuaGetDataUchar (L, "mag_filter",        &(newmtl->mag_filter));
-    zLuaGetDataString(L, "diffuse_map_name",    newmtl->diffuse_map_name,  Z_RESOURCE_NAME_SIZE);
-    zLuaGetDataString(L, "normal_map_name",     newmtl->normal_map_name,   Z_RESOURCE_NAME_SIZE);
-    zLuaGetDataString(L, "specular_map_name",   newmtl->specular_map_name, Z_RESOURCE_NAME_SIZE);
-    zLuaGetDataString(L, "vertex_shader",       newmtl->vertex_shader,     Z_RESOURCE_NAME_SIZE);
-    zLuaGetDataString(L, "fragment_shader",     newmtl->fragment_shader,   Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataUint  (L, "flags",           &(newmtl->flags));
+    zLuaGetDataUint  (L, "blend_type",      &(newmtl->blend_type));
+    zLuaGetDataFloats(L, "ambient_color",     newmtl->ambient_color,  4);
+    zLuaGetDataFloats(L, "diffuse_color",     newmtl->diffuse_color,  4);
+    zLuaGetDataFloats(L, "specular_color",    newmtl->specular_color, 4);
+    zLuaGetDataFloats(L, "emission_color",    newmtl->emission_color, 4);
+    zLuaGetDataFloats(L, "shininess",       &(newmtl->shininess),     1);
+    zLuaGetDataUchar (L, "wrap_mode",       &(newmtl->wrap_mode));
+    zLuaGetDataUchar (L, "min_filter",      &(newmtl->min_filter));
+    zLuaGetDataUchar (L, "mag_filter",      &(newmtl->mag_filter));
+    zLuaGetDataString(L, "diffuse_map_name",  newmtl->diffuse_map_name,  Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataString(L, "normal_map_name",   newmtl->normal_map_name,   Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataString(L, "specular_map_name", newmtl->specular_map_name, Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataString(L, "vertex_shader",     newmtl->vertex_shader,     Z_RESOURCE_NAME_SIZE);
+    zLuaGetDataString(L, "fragment_shader",   newmtl->fragment_shader,   Z_RESOURCE_NAME_SIZE);
 
     // Add material to hash table.
     if (!zAddMaterial(newmtl)) {
@@ -124,6 +124,10 @@ void zLoadMaterials(void)
 
     // Crerate temporary lua state.
     L = lua_open();
+
+    // Load base library, has iterators that could be userful..
+    lua_pushcfunction(L, luaopen_base);
+    lua_call(L, 0, 0);
 
     // Expose functions, enums/bitflags etc
     lua_register(L, "material", zLuaMaterial);
@@ -206,9 +210,9 @@ void zMaterialInfo(ZMaterial *mtl)
     zPrint("  shininess:       %.2f\n", mtl->shininess);
 
     zPrint("  texture wrap:    ");
-    if      (mtl->wrap_mode & Z_TEX_WRAP_REPEAT)    zPrint("repeat\n");
-    else if (mtl->wrap_mode & Z_TEX_WRAP_CLAMP)     zPrint("clamp\n");
-    else if (mtl->wrap_mode & Z_TEX_WRAP_CLAMPEDGE) zPrint("clampedge\n");
+    if      (mtl->wrap_mode == Z_TEX_WRAP_REPEAT)    zPrint("repeat\n");
+    else if (mtl->wrap_mode == Z_TEX_WRAP_CLAMP)     zPrint("clamp\n");
+    else if (mtl->wrap_mode == Z_TEX_WRAP_CLAMPEDGE) zPrint("clampedge\n");
     else zPrint("unknown?\n");
 
     if (mtl->min_filter == Z_TEX_FILTER_NEAREST) zPrint("  min filter:      nearest\n");
