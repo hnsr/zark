@@ -942,7 +942,7 @@ void zShutdown(void)
 
 char *zGetUserDir(void)
 {
-    static char userdir[Z_MAX_PATH];
+    static char userdir[Z_PATH_SIZE];
     static int initialized;
 
     if (!initialized) {
@@ -953,7 +953,7 @@ char *zGetUserDir(void)
         // Lookup homedir. Try HOME env var first, or getentpw if that fails.
         if ( (env_home = getenv("HOME")) && (len = strlen(env_home)) ) {
 
-            if (len < Z_MAX_PATH)
+            if (len < Z_PATH_SIZE)
                 strcat(userdir, env_home);
             else
                 zWarning("Home directory from $HOME exceeded buffer size, using empty string");
@@ -965,7 +965,7 @@ char *zGetUserDir(void)
 
                 if (pwd->pw_dir && (len = strlen(pwd->pw_dir)) ) {
 
-                    if (len < Z_MAX_PATH)
+                    if (len < Z_PATH_SIZE)
                         strcat(userdir, pwd->pw_dir);
                     else
                         zWarning("Home directory from passwd entry exceeded buffer size, using"
@@ -982,7 +982,7 @@ char *zGetUserDir(void)
         }
         
         // Append app name.
-        if ( (strlen(userdir) + strlen(Z_DIR_USERDATA) + 1) < Z_MAX_PATH ) {
+        if ( (strlen(userdir) + strlen(Z_DIR_USERDATA) + 1) < Z_PATH_SIZE ) {
             strcat(userdir, Z_DIR_SEPARATOR);
             strcat(userdir, Z_DIR_USERDATA);
         } else {
@@ -1023,10 +1023,9 @@ char *zGetFileFromDir(const char *path)
 {
     static int start = 1;
     static DIR *dir;
-    static char path_dir[Z_MAX_PATH];  // Full path to the directory.
-    static char path_file[Z_MAX_PATH]; // Full path to the file inside directory, a pointer to this
-                                       // is returned.
-
+    static char path_dir[Z_PATH_SIZE];  // Full path to the directory.
+    static char path_file[Z_PATH_SIZE]; // Full path to the file inside directory, a pointer to this
+                                        // is returned.
     struct dirent *entry;
 
     // When called for the first time for a new directory, build the full path to the directory and
@@ -1034,10 +1033,11 @@ char *zGetFileFromDir(const char *path)
     if (start) {
 
         // Append dirsep + path + dirsep to data dir, be sure it fits..
-        if ( (strlen(path) + strlen(Z_DIR_SYSDATA) + 1) > (Z_MAX_PATH-1) ) {
-            zWarning("Failed to open directory \"%s\", path length exceeded Z_MAX_PATH.", path);
+        if ( (strlen(path) + strlen(Z_DIR_SYSDATA) + 1) > (Z_PATH_SIZE-1) ) {
+            zWarning("Failed to open directory \"%s\", path length exceeded Z_PATH_SIZE.", path);
             return NULL;
         }
+
         path_dir[0] = '\0';
         strcat(path_dir, Z_DIR_SYSDATA);
         strcat(path_dir, Z_DIR_SEPARATOR);
@@ -1060,42 +1060,28 @@ char *zGetFileFromDir(const char *path)
     // reached.
     while ( (entry = readdir(dir)) ) {
 
-        struct stat s;
-
         // Entry filename is relative to the directory we opened, so append it to path_dir.
-        if ( (strlen(path_dir) + strlen(entry->d_name)) > (Z_MAX_PATH-1) ) {
-            zWarning("zGetFileFromDir: Failed to build path for file \"%s\" and path \"%s\","
-                " skipping.", entry->d_name, path_dir);
+        if ( (strlen(path_dir) + strlen(entry->d_name)) > (Z_PATH_SIZE-1) ) {
+            zWarning("%s: Path for file \"%s\" under \"%s\" exceeded Z_PATH_SIZE, skipping.",
+                __func__, entry->d_name, path_dir);
             continue;
         }
+
         path_file[0] = '\0';
         strcat(path_file, path_dir);
         strcat(path_file, entry->d_name);
 
-        // stat file to see if it is a regular file.
-        if (stat(path_file, &s) == 0) {
-
-            if ( S_ISREG(s.st_mode) )
-                break;
-            else
-                continue;
-
-        } else {
-
-            // Failed to stat, emit warning and continue happily.
-            zWarning("zGetFileFromDir: Failed to stat file \"%s\".", path_file);
-            continue;
-        }
+        // If file exists and is a regular file, break out of loop.
+        if (zFileExists(path_file))
+            return path_file;
     }
 
     // If entry is still NULL we reached end of directory.
-    if ( !entry ) {
-        closedir(dir);
-        start = 1;
-        return NULL;
-    }
+    assert(!entry);
 
-    return path_file;
+    closedir(dir);
+    start = 1;
+    return NULL;
 }
 
 

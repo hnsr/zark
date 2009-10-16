@@ -55,6 +55,7 @@
     #define Z_DIR_SYSDATA   "data"       // System-wide data directory.
 
 #else
+
     #ifdef HAVE_CONFIG_H
     #include "config.h"
     #endif
@@ -80,8 +81,10 @@
 // Size of array for storing names of recources (meshes, textures, materials etc.)
 #define Z_RESOURCE_NAME_SIZE 128
 
-// Size of buffers for filenames/paths
-#define Z_MAX_PATH 1024
+// Size of buffers for filenames/paths. Using 260 since that happens to be the limit for win32
+// file-related API, see
+// http://msdn.microsoft.com/en-us/library/aa365247(VS.85).aspx#maximum_path_length
+#define Z_PATH_SIZE 260
 
 #define Z_FILE_KEYBINDINGS "keybindings.conf"
 #define Z_FILE_AUTOEXEC    "autoexec.conf"

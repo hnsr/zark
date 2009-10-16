@@ -262,11 +262,11 @@ void zRewriteDirsep(char *path)
 // on how to treat returned string.
 const char *zGetSiblingPath(const char *filename, const char *sibling)
 {
-    static char path[Z_MAX_PATH];
+    static char path[Z_PATH_SIZE];
     int basename_start = 0;
     const char *s = filename;
 
-    if (strlen(filename) >= Z_MAX_PATH) {
+    if (strlen(filename) >= Z_PATH_SIZE) {
         zError("%s: File path too long.", __func__);
         return NULL;
     }
@@ -285,7 +285,7 @@ const char *zGetSiblingPath(const char *filename, const char *sibling)
     path[basename_start] = '\0';
 
     // Check that there's enough room to append sibling to path
-    if ( (strlen(sibling) + strlen(path)) >= Z_MAX_PATH) {
+    if ( (strlen(sibling) + strlen(path)) >= Z_PATH_SIZE) {
         zError("%s: File path too long.", __func__);
         return NULL;
     }
@@ -305,7 +305,7 @@ const char *zGetSiblingPath(const char *filename, const char *sibling)
 // Returns NULL if the path was too long (>Z_MAX_PATH).
 const char *zGetPath(const char *filename, const char *prefix, int flags)
 {
-    static char path[Z_MAX_PATH];
+    static char path[Z_PATH_SIZE];
     char *userdir = zGetUserDir();
     size_t reqsize = 0;
 
@@ -322,7 +322,7 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
         if (prefix && strlen(prefix) > 0) reqsize += strlen(prefix) + 1;
         reqsize += strlen(filename);
 
-        if (reqsize >= Z_MAX_PATH) {
+        if (reqsize >= Z_PATH_SIZE) {
             zError("%s: Resulting file path too long for file \"%s\" with prefix \"%s\".", __func__,
                 filename, prefix);
             return NULL;
@@ -354,7 +354,7 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
     if (prefix && strlen(prefix) > 0) reqsize += strlen(prefix) + 1;
     reqsize += strlen(filename);
 
-    if (reqsize >= Z_MAX_PATH) {
+    if (reqsize >= Z_PATH_SIZE) {
         zError("%s: Resulting file path too long for file \"%s\" with prefix \"%s\".", __func__,
             filename, prefix);
         return NULL;
@@ -417,20 +417,18 @@ char *zGetStringFromFile(const char *filename)
         if ( (tmp = realloc(result, result_size+READ_INC)) ) {
             result_size += READ_INC;
             result = tmp;
-        } else
-            goto zGetStringFromFile_error0;
+        } else {
+            free(result);
+            zError("%s: Failed to allocated memory.", __func__);
+            return NULL;
+        }
 
         bytes_read += fread(result+bytes_read, 1, READ_INC, file);
     }
 
     result[bytes_read] = '\0';
     return result;
-
-zGetStringFromFile_error0:
-    free(result);
-    return NULL;
 }
-
 
 
 

@@ -787,14 +787,13 @@ void zShutdown(void)
 // Since storing stuff directly under the user directory on Windows isn't really appropriate, I will
 // use My Documents (CSIDL_PERSONAL) instead.
 // More info: http://msdn.microsoft.com/en-us/library/bb762181(VS.85).aspx
-#define USERDIR_MAX 1024
 char *zGetUserDir(void)
 {
     static int initialized;
-    static char userdir[USERDIR_MAX];
+    static char userdir[Z_PATH_SIZE];
 
     if (!initialized) {
-        
+
         WCHAR path[MAX_PATH];
 
         // On Vista+ SHGetFolderPath has been deprecated and turned into a wrapper around the new
@@ -805,31 +804,22 @@ char *zGetUserDir(void)
         // Using the Unicode variant explicitly since I need to know what type of character I am
         // working with for conversion to UTF-8.
         if ( SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, path) == S_OK ) {
-            
-            // Convert to UTF8 encoded string.
-            if ( WideCharToMultiByte(CP_UTF8, 0, path, -1, userdir, USERDIR_MAX, NULL, NULL) == 0 ) {
 
+            // Convert to UTF8 encoded string.
+            if ( WideCharToMultiByte(CP_UTF8, 0, path, -1, userdir, Z_PATH_SIZE, NULL, NULL) == 0 ) {
                 zWarning("Failed to convert home directory string to UTF-8, using empty string");
                 userdir[0] = '\0';
-
             } else {
-                //zDebug("Using home directory \"%s\".", userdir);
-
                 // Append app name.
-                if ( (strlen(userdir) + strlen(Z_DIR_USERDATA) + 1) < USERDIR_MAX ) {
+                if ( (strlen(userdir) + strlen(Z_DIR_USERDATA) + 1) < Z_PATH_SIZE ) {
                     strcat(userdir, Z_DIR_SEPARATOR);
                     strcat(userdir, Z_DIR_USERDATA);
                 } else {
-                    zWarning("Documents + user data directory exceeded buffer dize, using empty"
-                        " string.");
+                    zWarning("Exceeded buffer size while building userdir, using empty string.");
                     userdir[0] = '\0';
                 }
-
-                //zDebug("Using user data directory \"%s\".", userdir);
             }
-
         } else {
-
             zWarning("Failed to look up home directory, using empty string.");
         }
 
@@ -846,35 +836,23 @@ int zFileExists(char *path)
     WCHAR pathwide[MAX_PATH];
     DWORD res;
 
-    // Transform path to wide characters and try to read its attributes.
-    if ( MultiByteToWideChar(CP_UTF8, 0, path, -1, pathwide, MAX_PATH) == 0 ) {
-        
-        zError("%s: Failed to check file existance because character set conversion for path \"%s\""
-            " failed", __func__, path);
+    if ( !MultiByteToWideChar(CP_UTF8, 0, path, -1, pathwide, MAX_PATH) ) {
+        zError("%s: Character set conversion for path \"%s\" failed", __func__, path);
         return 0;
+    }
+
+    if ( (res = GetFileAttributesW(pathwide)) != INVALID_FILE_ATTRIBUTES ) {
+
+        if ( !(res & FILE_ATTRIBUTE_DIRECTORY) ) // XXX: Is this the only attribute to check?
+            return 1;
 
     } else {
 
-        //zDebug("%s: Converted path \"%s\" to wide chars", __func__, path);
+        DWORD err = GetLastError();
 
-        if ( (res = GetFileAttributesW(pathwide)) != INVALID_FILE_ATTRIBUTES ) {
-
-            if ( res != FILE_ATTRIBUTE_DIRECTORY ) {
-
-                //zDebug("%s: \"%s\" is not a directory, so returning 1", __func__, path);
-                return 1;
-
-            } else {
-
-                //zDebug("%s: \"%s\" is a directory, returning 0", __func__, path);
-                return 0;
-            }
-
-        } else {
-
-            //zDebug("%s: Failed to read file attributes for \"%s\"", __func__, path);
-            return 0;
-        }
+        // I suppose I should warn if the error wasn't simply about the file not existing..
+        if ( err != ERROR_FILE_NOT_FOUND && err != ERROR_PATH_NOT_FOUND )
+            zError("%s: Failed to read file attributes for \"%s\". err = %d", __func__, path, err);
     }
 
     return 0;
@@ -884,6 +862,73 @@ int zFileExists(char *path)
 
 char *zGetFileFromDir(const char *path)
 {
+    int len;
+    static int start = 1;
+    static char dir_path[MAX_PATH];  // Full path to the directory; sysdir + path
+    static char file_path[MAX_PATH];  // Temp storage for full_path+filename
+    static HANDLE handle = INVALID_HANDLE_VALUE;
+    WIN32_FIND_DATAA data;
+
+    // TODO: Convert to widechar when passing search_path to FindFirstFile, convert back to UTF8
+    // when reading from FindNextFile..
+
+    if (start) {
+
+        // Construct directory search pattern.
+        if ( (strlen(path) + strlen(Z_DIR_SYSDATA) + 3) > (MAX_PATH-1) ) {
+            zWarning("Failed to open directory \"%s\", path length exceeded Z_MAX_PATH.", path);
+            return NULL;
+        }
+        dir_path[0] = '\0';
+        strcat(dir_path, Z_DIR_SYSDATA);
+        strcat(dir_path, Z_DIR_SEPARATOR);
+        strcat(dir_path, path);
+        strcat(dir_path, Z_DIR_SEPARATOR);
+        strcat(dir_path, "*");
+
+        // Only really needed for 'path', but since I need to work on a copy of it I'll just do it
+        // this way.
+        zRewriteDirsep(dir_path);
+
+        handle = FindFirstFileA(dir_path, &data);
+
+        // At this point I remove the trailing "*" from dir_path, so I can reuse to append the
+        // filename to later on.
+        len = strlen(dir_path);
+        assert(len > 0);
+        dir_path[len-1] = '\0';
+
+        if (handle == INVALID_HANDLE_VALUE) {
+            zWarning("Failed to open directory \"%s\".", path);
+            return NULL;
+        }
+    }
+
+    // Iterate over dir entries, return once a regular file is found. Prevent calling FindNextFile
+    // on first call, since data will have been filled in by FindFirstFile.
+    while (start || FindNextFileA(handle, &data)) {
+
+        start = 0;
+
+        // Append filename to dir_path.
+        if ( (strlen(dir_path) + strlen(data.cFileName)) > (MAX_PATH-1) ) {
+            zError("%s: file_path would exceed MAX_PATH while reading directory \"%s\".", __func__,
+                dir_path);
+            break;
+        }
+
+        file_path[0] = '\0';
+        strcat(file_path, dir_path);
+        strcat(file_path, data.cFileName);
+
+        if (zFileExists(file_path))
+            return file_path;
+    }
+
+    // FindNextFile returned false (= end of dir?) or some error occured, time to close..
+    FindClose(handle);
+    start = 1;
+
     return NULL;
 }
 
