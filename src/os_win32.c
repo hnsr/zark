@@ -880,3 +880,11 @@ int zFileExists(char *path)
     return 0;
 }
 
+
+
+char *zGetFileFromDir(const char *path)
+{
+    return NULL;
+}
+
+

@@ -22,3 +22,4 @@ win32/build/*.pdb
 win32/zark.ncb
 win32/zark.suo
 *.vcproj.*.user
+win32/~AutoRecover*
