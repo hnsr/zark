@@ -15,11 +15,11 @@ config.h.in
 config.h
 src/.deps
 win32/data
-win32/Debug
-win32/Release
+win32/build/Debug
+win32/build/Release
 win32/build/*.exe
 win32/build/*.pdb
 win32/zark.ncb
 win32/zark.suo
-*.vcproj.*.user
+win32/*.vcproj.*.user
 win32/~AutoRecover*
