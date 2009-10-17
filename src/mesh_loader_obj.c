@@ -812,9 +812,7 @@ static ZMaterial *lookup_material(const char *name)
     }
 
     // If that fails too, use default material.
-    zWarning("Failed to lookup material \"%s\" for mesh \"%s\", in either mesh-local or global"
-        " list.. using default material.", name, filename);
-
+    zWarning("Failed to lookup material \"%s\" for mesh \"%s\", using default.", name, filename);
     return &default_material;
 }
 

@@ -146,9 +146,9 @@ void zLoadMaterials(void)
 
         int err;
 
-        if (strcasecmp(zGetFileExtension(file), "mtl") != 0) continue;
+        if (strcasecmp(zGetFileExtension(file), "zmtl") != 0) continue;
 
-        //zDebug("Loading materials from %s", file);
+        zPrint("Loading materials from \"%s\".\n", file);
         err = luaL_dofile(L, file);
 
         if (err) {
