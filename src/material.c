@@ -123,9 +123,7 @@ void zLoadMaterials(void)
     lua_State *L;
 
     // Crerate temporary lua state.
-    L = lua_open();
-
-    // Load base library, has iterators that could be userful..
+    L = luaL_newstate();
     lua_pushcfunction(L, luaopen_base);
     lua_call(L, 0, 0);
 
@@ -144,19 +142,16 @@ void zLoadMaterials(void)
     // Run every material library through lua.
     while ( (file = zGetFileFromDir("materials")) ) {
 
-        int err;
-
-        if (strcasecmp(zGetFileExtension(file), "zmtl") != 0) continue;
+        if (strcasecmp(zGetFileExtension(file), "zmtl") != 0)
+            continue;
 
         zPrint("Loading materials from \"%s\".\n", file);
-        err = luaL_dofile(L, file);
 
-        if (err) {
+        if (luaL_dofile(L, file)) {
             // XXX: This doesn't (always?) print source filename/linenumber, why?
             zWarning("lua: %s", lua_tostring(L, -1));
             lua_pop(L, 1);
         }
-
     }
 
     lua_close(L);
@@ -652,6 +647,7 @@ static ZTexture *zLoadTexture(const char *name)
         return NULL;
     }
 
+    memset(tex, '\0', sizeof(ZTexture));
     memcpy(tex->name, name, namelen);
     tex->name[namelen] = '\0';
 
@@ -682,7 +678,7 @@ static ZTexture *zLoadTexture(const char *name)
 
         glBindTexture(GL_TEXTURE_2D, 0);
         zDeleteImage(img);
-        
+
         zAddTexture(tex);
         return tex;
     }

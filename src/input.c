@@ -551,8 +551,8 @@ int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring)
 
 
 
-// Load keybindings from file.
-void zLoadKeyBindings(const char *filename)
+// Load keybindings from file. Returns 0 on error, 1 otherwise.
+int zLoadKeyBindings(const char *filename)
 {
     FILE *fp;
 
@@ -563,13 +563,24 @@ void zLoadKeyBindings(const char *filename)
 
     if (fp == NULL) {
         zWarning("Failed to open keybindings file \"%s\".", filename);
-        return;
+        return 0;
     }
 
     // Parse keybindings.
+    // TODO: Maybe zParseKeyBindings should return to indicate failure success as well
     zParseKeyBindings(fp, filename);
 
     fclose(fp);
+    return 1;
 }
 
+
+// If any keybindings were changed, dump keybindings to file. Returns 0 on error, 1 otherwise.
+int zWriteKeyBindings(const char *filename)
+{
+    // TODO
+    // XXX: Maybe I should set a flag when a keybinding is changed by the user, so I don't write it
+    // if I don't have to.
+    return 0;
+}
 

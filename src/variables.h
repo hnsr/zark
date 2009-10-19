@@ -2,35 +2,42 @@
 #define __VARIABLES_H__
 
 
+// String variables are statically allocated, saves me some headache with memory management. I can
+// probably change this to use dynamic memory but I won't bother until I need to
+#define Z_VAR_STRING_SIZE 256
 
-#define Z_VAR_TYPE_INT    1
-#define Z_VAR_TYPE_FLOAT  2
-#define Z_VAR_TYPE_STRING 3
 
-// String variables are statically allocated, saves me some headache with memory managament, since
-// if I use dynamic memory instead, the default value shouldn't be freed since it points to a string
-// literal, while subsequently assigned strings *should* be. There may still be ways around this
-// but I'll just go with a fixed size until I find a compelling reason not to.
-#define Z_VAR_STRING_SIZE 200
+typedef enum ZVariableType
+{
+    Z_VAR_TYPE_INVALID,
+    Z_VAR_TYPE_INT,
+    Z_VAR_TYPE_FLOAT,
+    Z_VAR_TYPE_FLOAT3,
+    Z_VAR_TYPE_FLOAT4,
+    Z_VAR_TYPE_STRING
+
+} ZVariableType;
 
 
 typedef struct ZVariable
 {
-    unsigned int type;       // Type of this variable.
-    void *varptr;            // Pointer to internal variable for storage.
+    ZVariableType type;      // Type of this variable.
+    void *varptr;            // Pointer to variable storage.
     const char *name;        // Short name that identifies the variable.
     const char *description; // Description of the variable's purpose.
 
-    // The default value for this variable, I keep track of these so the user can revert to them at
-    // any time. Also this should ideally be a union, but it seems I can't initialize it at run-time
-    // (C99 allows it but is not supported by MSVC), so I waste some space instead..
-    const char   *str_default;
-    const int     int_default;
-    const float float_default;
+    // The default values and limits for this variable. I would use unions here, but it seems I can
+    // only initialize unions at run-time (C99 allows union initializers, but MSVC won't), which I
+    // prefer not to do for now..
+    const int      int_default;
+    const float  float_default;
+    const float float3_default[3];
+    const float float4_default[4];
+    const char    *str_default;
 
-    const int int_min;
-    const int int_max;
-
+    // When a scalar value is set, it is clamped to these min/max values first.
+    const int     int_min;
+    const int     int_max;
     const float float_min;
     const float float_max;
 
@@ -46,10 +53,27 @@ extern ZVariable variables[];
 #undef MAKE_EXTERNDECLS
 
 
-const char *zVariableType(unsigned int type);
+const char *zVariableType(ZVariableType type);
 
 ZVariable *zLookupVariable(const char *name);
 
+int zLoadVariables(const char *file);
+
+int zWriteVariables(const char *file);
+
+
+// Set variable to val, clamped to variable's min/max.
+#define zVarSetFloat(var,val) {\
+    float ff = (val); /* in case val has side-effects */\
+     *((float *)(var)->varptr) = ( ff > (var)->float_max ? (var)->float_max :\
+                                 ( ff < (var)->float_min ? (var)->float_min : ff ));\
+}
+
+#define zVarSetInt(var,val) {\
+    int ii = (val);\
+     *((int *)(var)->varptr) = ( ii > (var)->int_max ? (var)->int_max :\
+                               ( ii < (var)->int_min ? (var)->int_min : ii ));\
+}
 
 #endif
 

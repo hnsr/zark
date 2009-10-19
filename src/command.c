@@ -279,6 +279,7 @@ int zCmdHelp(const ZParsedCommand *pcmd)
             zPrint("  current: %s\n", (char *)var->varptr);
             zPrint("  default: %s\n", var->str_default);
         } 
+        // TODO: Add support for float3/4.
 
         return 1;
     }
@@ -379,8 +380,9 @@ int zCmdListVars(const ZParsedCommand *pcmd)
 
     zPrint("Listing all variables:\n");
 
-    for (i=0; variables[i].varptr != NULL; i++) {
-        zPrint("  %-16s (%-7s) - %s\n", variables[i].name, zVariableType(variables[i].type), variables[i].description);
+    for (i=0; variables[i].type != Z_VAR_TYPE_INVALID; i++) {
+        zPrint("  %-16s (%-7s) - %s\n", variables[i].name, zVariableType(variables[i].type),
+            variables[i].description);
     }
 
     zPrint("\n");
@@ -814,26 +816,26 @@ int zCmdSet(const ZParsedCommand *pcmd)
     switch (var->type) {
 
     case Z_VAR_TYPE_INT:
-        if ( i >= var->int_min && i <= var->int_max ) {
-            *((int *)var->varptr) = i;
-            return 1;
-        }
-        break;
+        zVarSetInt(var, i);
+        return 1;
 
     case Z_VAR_TYPE_FLOAT:
-        if ( f >= var->float_min && f <= var->float_max ) {
-            *((float *)var->varptr) = f;
-            return 1;
-        }
-        break;
+        zVarSetFloat(var, f);
+        return 1;
 
     case Z_VAR_TYPE_STRING:
-        // Skip if empty string was given..
         if (s == NULL) return 1;
+
         len = MIN(Z_VAR_STRING_SIZE-1, strlen(s));
-        // Copy terminating NULL byte as well.
         memcpy((void *)var->varptr, s, len+1); 
+
+        // This is needed in case the string was truncated, last char won't be a \0
         ((char *)var->varptr)[Z_VAR_STRING_SIZE-1] = '\0';
+        return 1;
+
+    case Z_VAR_TYPE_FLOAT3:
+    case Z_VAR_TYPE_FLOAT4:
+        zDebug("float3/float3 var types not supported yet.");
         return 1;
 
     default:
@@ -868,6 +870,12 @@ int zCmdGet(const ZParsedCommand *pcmd)
     case Z_VAR_TYPE_STRING:
         zPrint("%s = %s\n", var->name, (char *)var->varptr);
         return 1;
+
+    case Z_VAR_TYPE_FLOAT3:
+    case Z_VAR_TYPE_FLOAT4:
+        zDebug("float3/float3 var types not supported yet.");
+        return 1;
+
     default:
         assert( 0 && "Invalid variable type. This is a bug :(");
         return 0;
@@ -880,10 +888,7 @@ int zCmdGet(const ZParsedCommand *pcmd)
 int zCmdIncrease(const ZParsedCommand *pcmd)
 {
     ZVariable *var = pcmd->args[0].var_arg;
-    int *ivar, int_inc = 1;
-    float *fvar, float_inc = 1.0f;
 
-    // Check we were passed an integer variable name.
     if (!var) {
         zError("No valid variable name was given.");
         return 0;
@@ -891,27 +896,25 @@ int zCmdIncrease(const ZParsedCommand *pcmd)
 
     if (var->type == Z_VAR_TYPE_INT) {
 
-        if (pcmd->numargs > 1) int_inc = pcmd->args[1].int_arg;
+        int newval = *((int *)var->varptr);
 
-        // Increment
-        ivar = var->varptr;
-        *ivar += int_inc;
+        if (pcmd->numargs > 1)
+            newval += pcmd->args[1].int_arg;
+        else
+            newval += 1;
 
-        // Clamp to min/max.
-        if (*ivar > var->int_max)      *ivar = var->int_max;
-        else if (*ivar < var->int_min) *ivar = var->int_min;
+        zVarSetInt(var, newval);
 
     } else if (var->type == Z_VAR_TYPE_FLOAT) {
 
-        if (pcmd->numargs > 1) float_inc = (float) pcmd->args[1].float_arg;
+        float newval = *((float *)var->varptr);
 
-        // Increment
-        fvar = var->varptr;
-        *fvar += float_inc;
+        if (pcmd->numargs > 1)
+            newval += (float) pcmd->args[1].float_arg;
+        else
+            newval += 1.0f;
 
-        // Clamp to min/max.
-        if (*fvar > var->float_max)      *fvar = var->float_max;
-        else if (*fvar < var->float_min) *fvar = var->float_min;
+        zVarSetFloat(var, newval);
 
     } else {
         zError("Given variable was not of float or integer type.");
@@ -925,10 +928,7 @@ int zCmdIncrease(const ZParsedCommand *pcmd)
 int zCmdDecrease(const ZParsedCommand *pcmd)
 {
     ZVariable *var = pcmd->args[0].var_arg;
-    int *ivar, int_dec = 1;
-    float *fvar, float_dec = 1.0f;
 
-    // Check we were passed an integer variable name.
     if (!var) {
         zError("No valid variable name was given.");
         return 0;
@@ -936,27 +936,25 @@ int zCmdDecrease(const ZParsedCommand *pcmd)
 
     if (var->type == Z_VAR_TYPE_INT) {
 
-        if (pcmd->numargs > 1) int_dec = pcmd->args[1].int_arg;
+        int newval = *((int *)var->varptr);
 
-        // Increment
-        ivar = var->varptr;
-        *ivar -= int_dec;
+        if (pcmd->numargs > 1)
+            newval -= pcmd->args[1].int_arg;
+        else
+            newval -= 1;
 
-        // Clamp to min/max.
-        if (*ivar > var->int_max)      *ivar = var->int_max;
-        else if (*ivar < var->int_min) *ivar = var->int_min;
+        zVarSetInt(var, newval);
 
     } else if (var->type == Z_VAR_TYPE_FLOAT) {
 
-        if (pcmd->numargs > 1) float_dec = (float) pcmd->args[1].float_arg;
+        float newval = *((float *)var->varptr);
 
-        // Increment
-        fvar = var->varptr;
-        *fvar -= float_dec;
+        if (pcmd->numargs > 1)
+            newval -= (float) pcmd->args[1].float_arg;
+        else
+            newval -= 1.0f;
 
-        // Clamp to min/max.
-        if (*fvar > var->float_max)      *fvar = var->float_max;
-        else if (*fvar < var->float_min) *fvar = var->float_min;
+        zVarSetFloat(var, newval);
 
     } else {
         zError("Given variable was not of float or integer type.");
@@ -970,24 +968,15 @@ int zCmdDecrease(const ZParsedCommand *pcmd)
 int zCmdToggle(const ZParsedCommand *pcmd)
 {
     ZVariable *var = pcmd->args[0].var_arg;
-    int *ivar;
 
-    // Check we were passed an integer variable name.
     if (!var) {
         zError("No valid variable name was given.");
         return 0;
     }
 
-    ivar = var->varptr;
-
     if (var->type == Z_VAR_TYPE_INT) {
-
-        *ivar = !(*ivar);
-
-        // Clamp to min/max.
-        if (*ivar > var->int_max)      *ivar = var->int_max;
-        else if (*ivar < var->int_min) *ivar = var->int_min;
-
+        int newval = !(*((int *)var->varptr));
+        zVarSetInt(var, newval);
     } else {
         zError("Given variable was not an integer.");
         return 0;

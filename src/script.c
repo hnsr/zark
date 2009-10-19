@@ -29,7 +29,7 @@ void zLuaWarning(lua_State *L, const char *msg, ...)
 
 
 
-// The zLuaGetData* functions are intended to make parsing of data-definition files easier. Data
+// The zLuaGetData* functions are intended to make parsing of data-description files easier. Data
 // entry is done by calling functions from lua with a single table as parameter. I.e.:
 //
 //   foo {

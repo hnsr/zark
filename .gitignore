@@ -3,6 +3,7 @@
 *.swp
 *Makefile.in
 *Makefile
+*cscope.out
 stamp-h1
 src/zark
 config.status

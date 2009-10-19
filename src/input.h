@@ -128,6 +128,8 @@ void zDispatchKeyEvent(const ZKeyEvent *zkev);
 
 int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring);
 
-void zLoadKeyBindings(const char *filename);
+int zLoadKeyBindings(const char *filename);
+
+int zWriteKeyBindings(const char *filename);
 
 #endif

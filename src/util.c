@@ -82,6 +82,7 @@ void zPrintInputStuff(unsigned int what)
                 zDebug("    current value: %s", (char *)variables[i].varptr);
 
             }
+            // TODO: handle float3/4
             zDebug("");
         }
         zDebug("");

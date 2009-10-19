@@ -1001,7 +1001,7 @@ char *zGetUserDir(void)
 
 
 
-int zFileExists(char *path)
+int zFileExists(const char *path)
 {
     struct stat s;
 

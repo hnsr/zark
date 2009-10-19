@@ -43,7 +43,7 @@ void zShutdown(void);
 char *zGetUserDir(void);
 
 // Returns 1 if path exists and is a regular file.
-int zFileExists(char *path);
+int zFileExists(const char *path);
 
 // Returns strings for each regular file found in directory 'path' (path is relative to data
 // directory). Returns NULL when no more files are found. This function should only be called in a

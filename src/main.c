@@ -67,8 +67,9 @@ int zMain(int argc, char** argv)
     iluInit();
 
     zLoadMaterials();
-    zLoadCommands(Z_FILE_AUTOEXEC);
+    zLoadVariables(Z_FILE_CONFIG);
     zLoadKeyBindings(Z_FILE_KEYBINDINGS);
+    zLoadCommands(Z_FILE_STARTUP);
 
     zOpenWindow(r_winwidth, r_winheight);
 
@@ -89,6 +90,9 @@ int zMain(int argc, char** argv)
         zDeleteScene(scene);
         scene = NULL;
     }
+
+    zWriteVariables(Z_FILE_CONFIG);
+    zWriteKeyBindings(Z_FILE_KEYBINDINGS);
 
     zCloseWindow();
     zShutdown();

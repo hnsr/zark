@@ -86,8 +86,14 @@
 // http://msdn.microsoft.com/en-us/library/aa365247(VS.85).aspx#maximum_path_length
 #define Z_PATH_SIZE 260
 
-#define Z_FILE_KEYBINDINGS "keybindings.conf"
-#define Z_FILE_AUTOEXEC    "autoexec.conf"
+
+// On startup, zark will look for FILE_CONFIG and FILE_KEYBINDINGS under DIR_USERDATA first, if not
+// found, it will look under DIR_SYSDATA instead. These should always be available under DIR_SYSDATA
+// and provide some sane defaults. On exit, keybindings are dumped to FILE_KEYBINDINGS under the
+// DIR_USERDATA, and non-default variables are dumped to FILE_CONFIG under DIR_USERDATA.
+#define Z_FILE_CONFIG      "config.zvar"
+#define Z_FILE_KEYBINDINGS "keybindings.zkbd"
+#define Z_FILE_STARTUP     "startup.zcmd"
 
 
 #include "renderer.h"
