@@ -970,18 +970,11 @@ char *zGetUserDir(void)
                     else
                         zWarning("Home directory from passwd entry exceeded buffer size, using"
                         " empty string");
-
-                } else {
-                    //zDebug("%s: Failed to get home directory from passwd entry, using empty"
-                    //    " string", __func__);
                 }
-            } else {
-                //zDebug("%s: Failed to look up passwd entry, using empty string.", __func__);
             }
-
         }
         
-        // Append app name.
+        // Append app-specific component.
         if ( (strlen(userdir) + strlen(Z_DIR_USERDATA) + 1) < Z_PATH_SIZE ) {
             strcat(userdir, Z_DIR_SEPARATOR);
             strcat(userdir, Z_DIR_USERDATA);
@@ -990,8 +983,6 @@ char *zGetUserDir(void)
                 " string.");
             userdir[0] = '\0';
         }
-
-        //zDebug("Using user data directory \"%s\".", userdir);
 
         initialized = 1;
     }

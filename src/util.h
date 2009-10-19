@@ -9,11 +9,12 @@
 #define Z_INPUT_KEYBINDINGS 8
 
 // Flags for opening files / constructing paths.
-#define Z_FILE_TRYUSER        1 // Try opening/looking for file from/in user directory first.
-#define Z_FILE_WRITE          2 // Open for writing, file will be opened for reading if not set.
-#define Z_FILE_REWRITE_DIRSEP 4 // Transform directory seperators in filenames to native ones. Only 
-                                // needed if provided filenames are from external sources (material
-                                // definitions, console commands).
+#define Z_FILE_TRYUSER         1 // Try to open the file from/construct path for USERDATA dir first.
+#define Z_FILE_FORCEUSER       2 // Construct path for/open file from USERDATA dir only.
+#define Z_FILE_WRITE           4 // Open for writing, file will be opened for reading if not set.
+#define Z_FILE_REWRITE_DIRSEP  8 // Transform directory seperators in filenames to native ones. Only
+                                 // needed if provided filenames are from external sources (material
+                                 // definitions, console commands).
 
 
 // Debugging stuff
@@ -48,7 +49,7 @@ const char *zGetSiblingPath(const char *filename, const char *sibling);
 
 const char *zGetPath(const char *filename, const char *prefix, int flags);
 
-FILE *zOpenFile(const char *filename, const char *prefix, int flags);
+FILE *zOpenFile(const char *filename, const char *prefix, const char **fullpath, int flags);
 
 char *zGetStringFromFile(const char *filename);
 

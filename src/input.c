@@ -555,16 +555,17 @@ int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring)
 int zLoadKeyBindings(const char *filename)
 {
     FILE *fp;
-
-    zPrint("Loading keybindings from \"%s\".\n", filename);
+    const char *fullpath;
 
     // Open file for input
-    fp = zOpenFile(filename, NULL, Z_FILE_TRYUSER);
+    fp = zOpenFile(filename, NULL, &fullpath, Z_FILE_TRYUSER);
 
     if (fp == NULL) {
-        zWarning("Failed to open keybindings file \"%s\".", filename);
+        zWarning("Failed to load keybindings from \"%s\".", fullpath);
         return 0;
     }
+
+    zPrint("Loading keybindings from \"%s\".\n", fullpath);
 
     // Parse keybindings.
     // TODO: Maybe zParseKeyBindings should return to indicate failure success as well

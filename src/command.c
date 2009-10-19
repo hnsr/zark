@@ -52,17 +52,19 @@ void zLoadCommands(const char *filename)
 {
     FILE *fp;
     char buf[CMD_BUF_SIZE], *cmdstring;
+    const char *fullpath;
     int bufpos = 0, c, linecount = 0;
 
-    zPrint("Loading and executing commands from \"%s\".\n", filename);
 
     // Open file
-    fp = zOpenFile(filename, NULL, Z_FILE_TRYUSER);
+    fp = zOpenFile(filename, NULL, &fullpath, Z_FILE_TRYUSER);
 
     if (fp == NULL) {
-        zError("Failed to open file \"%s\".", filename);
+        zError("Failed to execute commands from \"%s\".", fullpath);
         return;
     }
+
+    zPrint("Loading and executing commands from \"%s\".\n", fullpath);
 
     // Keep reading lines from fp until EOF
     while ( !feof(fp) ) {
@@ -79,7 +81,7 @@ void zLoadCommands(const char *filename)
             } else {
                 // Can't write anymore to buf, skip to newline (or EOF), warn user, and continue
                 // with next line.
-                zWarning("Line %d in %s exceeded CMD_BUF_SIZE and was ignored.", linecount, filename);
+                zWarning("Line %d in \"%s\" exceeded CMD_BUF_SIZE and was ignored.", linecount, fullpath);
                 while ( (c = fgetc(fp)) != '\n' && c != EOF ) ;
                 bufpos = 0;
                 linecount++;
@@ -102,7 +104,7 @@ void zLoadCommands(const char *filename)
 
         // Execute cmdstring.
         if (!zExecCmdString(buf)) {
-            zWarning("Previous error was on line %u in \"%s\".", linecount, filename);
+            zWarning("Previous error was on line %u in \"%s\".", linecount, fullpath);
         }
 
         bufpos = 0;

@@ -298,12 +298,16 @@ const char *zGetSiblingPath(const char *filename, const char *sibling)
 
 
 
-// Construct a full path for given filename and prefix, prepending either the user or system data
-// directory to it; if TRY_USER is specified in flags, an extra check is done to see if the
-// requested filename/prefix exists in the user data directory, and if so, that path is returned,
-// else it is returned for the system data directory (without checking wether or not it exists). The
-// returned string is statically allocated, should not be freed, and is modified on the next call.
-// Returns NULL if the path was too long (>Z_MAX_PATH).
+// Construct a path from datadir+prefix+filename. The path returned is statically allocated and
+// valid until the next call of this function. The 'datadir' component depends on flags. If
+// FORCEUSER is given, this will the user data directory. If TRYUSER is given, 'datadir' will be the
+// user data directory if the file exists there, or the system data directory otherwise. If neither
+// flag is given it will always be the system data dir. Returns NULL if the path's length exceeded
+// Z_PATH_SIZE-1. If flags has Z_FILE_REWRITE_DIRSEP set, directory seperators are rewritten to
+// those native of the platform.
+// XXX: Maybe I should just make Z_FILE_REWRITE_DIRSEP default, overhead of rewriting is going to be
+// nothing compared to processing the file and doing it by default should make things simpler and
+// more foolproof.. I think
 const char *zGetPath(const char *filename, const char *prefix, int flags)
 {
     static char path[Z_PATH_SIZE];
@@ -315,10 +319,10 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
     // Truncate or else we append to the path constructed on the previous invocation.
     path[0] = '\0';
 
-    // Try looking for file in user direcotry first if desired.
-    if (flags & Z_FILE_TRYUSER) {
+    // Try looking for file in user directory first if desired.
+    if (flags & (Z_FILE_TRYUSER | Z_FILE_FORCEUSER)) {
 
-        // Check that the full path doesn't exceed Z_MAX_PATH.
+        // Check that the full path doesn't exceed Z_PATH_SIZE.
         reqsize += strlen(userdir) + 1; // +1 for directory separator.
         if (prefix && strlen(prefix) > 0) reqsize += strlen(prefix) + 1;
         reqsize += strlen(filename);
@@ -341,7 +345,7 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
         if (flags & Z_FILE_REWRITE_DIRSEP)
             zRewriteDirsep(path);
 
-        if (zFileExists(path))
+        if (zFileExists(path) || (flags & Z_FILE_FORCEUSER))
             return path;
 
         //zDebug("%s: \"%s\" doesn't exist, trying system data directory.", __func__, path);
@@ -372,16 +376,17 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
     if (flags & Z_FILE_REWRITE_DIRSEP)
         zRewriteDirsep(path);
 
-
     return path;
 }
 
 
 
-// Tries to open the file at root+prefix+filename. If Z_FILE_TRYUSER is set in flags, it will try
-// opening using the user data directory as root first. If that fails or of the Z_FILE_TRYUSER bit
-// is not set it will use the system data directory as root.
-FILE *zOpenFile(const char *filename, const char *prefix, int flags)
+// Tries to open the file at datadir+prefix+filename. For the meaning of datadir path component and
+// 'flags', see zGetPath. If fullpath is not NULL, it will be pointed to a statically allocated
+// string that contains the full path of the file being opened, or if constructing the path failed,
+// simply to 'filename'. 'fullpath' remains valid until the next call of either this function or
+// zGetPath. Returns valid file handle on success, or NULL on failure.
+FILE *zOpenFile(const char *filename, const char *prefix, const char **fullpath, int flags)
 {
     char *mode;
     const char *path;
@@ -392,11 +397,13 @@ FILE *zOpenFile(const char *filename, const char *prefix, int flags)
     if (flags & Z_FILE_WRITE) mode = "w+b";
     else                      mode = "rb";
 
-    path = zGetPath(filename, prefix, flags);
-    
-    //zDebug("Opening \"%s\" with path \"%s\".", filename, path);
-
-    return fopen(path, mode);
+    if ( (path = zGetPath(filename, prefix, flags)) ) {
+        if (fullpath) *fullpath = path;
+        return fopen(path, mode);
+    } else {
+        if (fullpath) *fullpath = filename;
+        return NULL;
+    }
 }
 
 

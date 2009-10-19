@@ -153,17 +153,14 @@ int zLoadVariables(const char *file)
     lua_State *L;
     const char *filename = zGetPath(file, NULL, Z_FILE_TRYUSER);
 
-    if (!filename) {
-        zWarning("%s: Failed to build path name for \"%s\".", __func__, file);
-        return 0;
-    }
+    if (!filename) return 0;
 
     if (!zFileExists(filename)) {
-        zWarning("Failed to read variables from \"%s\", file not found/not a regular file.", file);
+        zWarning("Failed to read variables from \"%s\", file doesn't exist (or is not a regular file).", filename);
         return 0;
     }
 
-    zPrint("Loading variables from \"%s\".\n", file);
+    zPrint("Loading variables from \"%s\".\n", filename);
 
     // Create state, expose base library and zLuaSet.
     assert(L = luaL_newstate());
@@ -194,7 +191,7 @@ int zLoadVariables(const char *file)
 // Return 1 on success, 0 on failure.
 int zWriteVariables(const char *file)
 {
-    // Open file under userdata dir for writing.
+    //FILE *fp = zOpenFile(file, "", Z_FILE_WRITE);
     // Dump header.
     // Iterate over each variable, if currentval != defaultval, write it.
     return 0;

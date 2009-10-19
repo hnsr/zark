@@ -876,7 +876,7 @@ char *zGetFileFromDir(const char *path)
 
         // Construct directory search pattern.
         if ( (strlen(path) + strlen(Z_DIR_SYSDATA) + 3) > (MAX_PATH-1) ) {
-            zWarning("Failed to open directory \"%s\", path length exceeded Z_MAX_PATH.", path);
+            zWarning("Failed to open directory \"%s\", path length exceeded MAX_PATH.", path);
             return NULL;
         }
         dir_path[0] = '\0';
