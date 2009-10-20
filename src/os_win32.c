@@ -802,7 +802,8 @@ char *zGetUserDir(void)
         if ( SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, path) == S_OK ) {
 
             // Convert to UTF8 encoded string.
-            if ( WideCharToMultiByte(CP_UTF8, 0, path, -1, userdir, Z_PATH_SIZE, NULL, NULL) == 0 ) {
+            if ( WideCharToMultiByte(CP_UTF8, 0, path, -1, userdir, Z_PATH_SIZE, NULL, NULL) == 0 )
+            {
                 zWarning("Failed to convert home directory string to UTF-8, using empty string");
                 userdir[0] = '\0';
             } else {
@@ -816,13 +817,18 @@ char *zGetUserDir(void)
                     // Make sure the directory exists (create if not) and that it is a directory.
                     if (!zPathExists(userdir)) {
 
-                        zPrint("Creating user data directory at \"%s\".\n", userdir);
+                        WCHAR userdir_w[MAX_PATH];
 
-                        // TODO: I'm passing a UTF8 string here to an ANSI win32 function. Instead I
-                        // should probably convert it back to widechar and use the unicode version..
-                        if (!CreateDirectoryA(userdir, NULL)) {
-                            zWarning("Failed to create user directory.");
+                        if ( !MultiByteToWideChar(CP_UTF8, 0, userdir, -1, userdir_w, MAX_PATH) ) {
+                            zError("%s: Character set conversion for path \"%s\" failed", __func__,
+                                path);
                             userdir[0] = '\0';
+                        } else {
+                            zPrint("Creating user data directory at \"%s\".\n", userdir);
+                            if (!CreateDirectoryW(userdir_w, NULL)) {
+                                zWarning("Failed to create user directory.");
+                                userdir[0] = '\0';
+                            }
                         }
                     } else if (zPathExists(userdir) != Z_EXISTS_DIR) {
                         zWarning("User directory \"%s\" exists but is not a directory.", userdir);
@@ -889,13 +895,11 @@ char *zGetFileFromDir(const char *path)
     static char dir_path[MAX_PATH];  // Full path to the directory; sysdir + path
     static char file_path[MAX_PATH];  // Temp storage for full_path+filename
     static HANDLE handle = INVALID_HANDLE_VALUE;
-    WIN32_FIND_DATAA data;
-
-    // TODO: Convert to widechar when passing search path to FindFirstFile, convert back to UTF8
-    // when reading from FindNextFile.. Without doing that, this may fail if path contains non-ASCII
-    // chars
+    WIN32_FIND_DATAW data;
 
     if (start) {
+
+        WCHAR search_path[MAX_PATH];
 
         // Construct directory search pattern.
         if ( (strlen(path) + strlen(Z_DIR_SYSDATA) + 3) > (MAX_PATH-1) ) {
@@ -913,7 +917,13 @@ char *zGetFileFromDir(const char *path)
         // this way.
         zRewriteDirsep(dir_path);
 
-        handle = FindFirstFileA(dir_path, &data);
+        // Convert search path to wide characters.
+        if ( !MultiByteToWideChar(CP_UTF8, 0, dir_path, -1, search_path, MAX_PATH) ) {
+            zError("%s: Character set conversion for path \"%s\" failed", __func__, path);
+            return NULL;
+        }
+
+        handle = FindFirstFileW(search_path, &data);
 
         // At this point I remove the trailing "*" from dir_path, so I can reuse to append the
         // filename to later on.
@@ -922,19 +932,28 @@ char *zGetFileFromDir(const char *path)
         dir_path[len-1] = '\0';
 
         if (handle == INVALID_HANDLE_VALUE) {
-            zWarning("Failed to open directory \"%s\".", path);
+            zWarning("Failed to open directory \"%s\". last_error = %d", path, GetLastError());
             return NULL;
         }
     }
 
     // Iterate over dir entries, return once a regular file is found. Prevent calling FindNextFile
     // on first call, since data will have been filled in by FindFirstFile.
-    while (start || FindNextFileA(handle, &data)) {
+    while (start || FindNextFileW(handle, &data)) {
+
+        char filename[Z_PATH_SIZE];
 
         start = 0;
 
+        // Convert data.cFileName to UTF8.
+        if ( !WideCharToMultiByte(CP_UTF8, 0, data.cFileName, -1, filename, Z_PATH_SIZE, NULL, NULL)
+                ) {
+            zError("%s: Character set conversion failed while reading directory \"%s\".", __func__,
+                dir_path);
+            break;
+        }
         // Append filename to dir_path.
-        if ( (strlen(dir_path) + strlen(data.cFileName)) > (MAX_PATH-1) ) {
+        if ( (strlen(dir_path) + strlen(filename)) > (MAX_PATH-1) ) {
             zError("%s: file_path would exceed MAX_PATH while reading directory \"%s\".", __func__,
                 dir_path);
             break;
@@ -942,7 +961,7 @@ char *zGetFileFromDir(const char *path)
 
         file_path[0] = '\0';
         strcat(file_path, dir_path);
-        strcat(file_path, data.cFileName);
+        strcat(file_path, filename);
 
         if (zPathExists(file_path) == Z_EXISTS_REGULAR)
             return file_path;
