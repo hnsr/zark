@@ -128,7 +128,7 @@ static int zHandleMouseEvents(UINT message, WPARAM wparam, LPARAM lparam, ZKeyEv
 
     zkev->modmask = zGetWinModMask();
     return TRUE;
-    //zDebug("%s (%s)", zKeyName(zkev.key), zkev.keystate == Z_KEY_STATE_PRESS ? "press" : "release"); 
+    //zDebug("%s (%s)", zKeyName(zkev.key), zkev.keystate == Z_KEY_STATE_PRESS ? "press" : "release");
 }
 
 
@@ -247,7 +247,7 @@ static ZKey zTranslateWinKey(WPARAM wparam, LPARAM lparam)
             case VK_RIGHT:   return KEY_KP_6;
         }
     }
-    
+
     return KEY_UNKNOWN;
 }
 
@@ -285,22 +285,23 @@ static void zInitConsole(void)
 // Application entry-point.
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+    int res;
+
     timeBeginPeriod(1);
 
-    // TODO: Autoexec not loaded at this point so I can't use something like a 'showconsole'
-    // variable. For now I'll only open one bydefault in DEBUG builds. For release builds I should
-    // maybe check a command line flag (-console) or something.
-#ifdef DEBUG
+    // Always open a console for now. I should probably only open one by default for DEBUG builds,
+    // but make it overrideable by some commandline option.
     zInitConsole();
-#else
-    // TODO: Check for -console flag
-    zInitConsole();
-#endif
 
     app_instance = hInstance;
     cmd_show = nCmdShow;
 
-    return zMain(0, NULL);
+    res = zMain(0, NULL);
+
+    // Silly hack so I get a chance to read console output on exit..
+    getchar();
+
+    return res;
 }
 
 
@@ -370,7 +371,7 @@ void zEnableMouse(void)
 void zDisableMouse(void)
 {
     assert(window_active);
-    
+
     mouse_stack--;
 
     if (mouse_stack < 1) {
@@ -427,7 +428,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
         // Same reason as WM_SIZE.
         GetWindowRect(window_handle, &window_rect);
         break;
- 
+
     case WM_CLOSE:
         // User wants to close window, so just quit, window will be closed after we break out of the
         // main loop.
@@ -492,7 +493,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 
     case WM_KEYUP:
     case WM_SYSKEYUP:
- 
+
         zkev.key = zTranslateWinKey(wparam, lparam);
         zkev.modmask = zGetWinModMask();
         zkev.keystate = is_keydown ? Z_KEY_STATE_PRESS : Z_KEY_STATE_RELEASE;
@@ -540,12 +541,12 @@ void zSleep(float ms)
 }
 
 
- 
+
 // Get timestamp in ms.
 float zGetTimeMS(void)
 {
     static int base = 0;
-    
+
     if (!base) {
         base = timeGetTime();
         return 0;
@@ -564,11 +565,11 @@ void zProcessEvents(void)
     int win_middle_screen_x, win_middle_screen_y;
 
     assert(window_active);
-    
+
     while ( PeekMessage(&message, window_handle, 0, 0, PM_REMOVE) ) {
-        
+
         if (text_input)
-            TranslateMessage(&message); 
+            TranslateMessage(&message);
 
         DispatchMessage(&message);
     }
@@ -670,14 +671,9 @@ void zOpenWindow(int width, int height)
     pfd.cColorBits = 24;
     pfd.iLayerType = PFD_MAIN_PLANE;
 
-    if (r_stencilbuffer)
-        pfd.cStencilBits = 24;
-
-    if (r_depthbuffer)
-        pfd.cDepthBits = 24;
-
-    if (r_doublebuffer)
-        pfd.dwFlags |= PFD_DOUBLEBUFFER;
+    if (r_stencilbuffer) pfd.cStencilBits = 24;
+    if (r_depthbuffer)   pfd.cDepthBits   = 24;
+    if (r_doublebuffer)  pfd.dwFlags     |= PFD_DOUBLEBUFFER;
 
     format = ChoosePixelFormat(device_context, &pfd);
 
@@ -715,9 +711,9 @@ void zOpenWindow(int width, int height)
 
     ShowWindow(window_handle, cmd_show);
     UpdateWindow(window_handle);
-    
+
     GetWindowRect(window_handle, &window_rect);
-    
+
     window_active = 1;
 
     zRendererInit();
@@ -746,7 +742,7 @@ void zCloseWindow()
     wglMakeCurrent(NULL, NULL);
     wglDeleteContext(render_context);
     ReleaseDC(window_handle, device_context);
-    
+
     window_active = 0;
 
     DestroyWindow(window_handle);
@@ -810,10 +806,29 @@ char *zGetUserDir(void)
                 zWarning("Failed to convert home directory string to UTF-8, using empty string");
                 userdir[0] = '\0';
             } else {
+
                 // Append app name.
                 if ( (strlen(userdir) + strlen(Z_DIR_USERDATA) + 1) < Z_PATH_SIZE ) {
+
                     strcat(userdir, Z_DIR_SEPARATOR);
                     strcat(userdir, Z_DIR_USERDATA);
+
+                    // Make sure the directory exists (create if not) and that it is a directory.
+                    if (!zPathExists(userdir)) {
+
+                        zPrint("Creating user data directory at \"%s\".\n", userdir);
+
+                        // TODO: I'm passing a UTF8 string here to an ANSI win32 function. Instead I
+                        // should probably convert it back to widechar and use the unicode version..
+                        if (!CreateDirectoryA(userdir, NULL)) {
+                            zWarning("Failed to create user directory.");
+                            userdir[0] = '\0';
+                        }
+                    } else if (zPathExists(userdir) != Z_EXISTS_DIR) {
+                        zWarning("User directory \"%s\" exists but is not a directory.", userdir);
+                        userdir[0] = '\0';
+                    }
+
                 } else {
                     zWarning("Exceeded buffer size while building userdir, using empty string.");
                     userdir[0] = '\0';
@@ -826,26 +841,33 @@ char *zGetUserDir(void)
         initialized = 1;
     }
 
-    return userdir;
+    // Only return if it's not an empty string.
+    if (*userdir) return userdir;
+
+    return NULL;
 }
 
 
 
-int zFileExists(char *path)
+int zPathExists(const char *path)
 {
     WCHAR pathwide[MAX_PATH];
-    DWORD res;
+    DWORD attrib;
 
     if ( !MultiByteToWideChar(CP_UTF8, 0, path, -1, pathwide, MAX_PATH) ) {
         zError("%s: Character set conversion for path \"%s\" failed", __func__, path);
         return 0;
     }
 
-    if ( (res = GetFileAttributesW(pathwide)) != INVALID_FILE_ATTRIBUTES ) {
+    if ( (attrib = GetFileAttributesW(pathwide)) != INVALID_FILE_ATTRIBUTES ) {
 
-        if ( !(res & FILE_ATTRIBUTE_DIRECTORY) ) // XXX: Is this the only attribute to check?
-            return 1;
-
+        if ( attrib & FILE_ATTRIBUTE_DIRECTORY ) {
+            return Z_EXISTS_DIR;
+        } else {
+            // Just checking for the NORMAL attribute doesn't work, for some reason.. So I'll just
+            // assume it is a regular file when DIRECTORY is not set.
+            return Z_EXISTS_REGULAR;
+        }
     } else {
 
         DWORD err = GetLastError();
@@ -921,7 +943,7 @@ char *zGetFileFromDir(const char *path)
         strcat(file_path, dir_path);
         strcat(file_path, data.cFileName);
 
-        if (zFileExists(file_path))
+        if (zPathExists(file_path) == Z_EXISTS_REGULAR)
             return file_path;
     }
 

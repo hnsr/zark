@@ -18,7 +18,7 @@
 static void zCameraUpdateViewTransform(ZCamera *cam)
 {
     GLfloat *m = cam->view_transform;
-    ZVec3 right, back; 
+    ZVec3 right, back;
 
     // The camera position can be used to derive the translation by inverting it (since the position
     // as-is would be the World->Camera translation, while I need the Camera->World transform).
@@ -98,9 +98,9 @@ void zCameraYaw(ZCamera *camera, float angle)
     float m[9];
     float r = DEG_TO_RAD(-angle); // Invert angle since positive yaw is to the right.
 
-    m[0] = cosf(r);   m[3] = 0.0f;  m[6] = sinf(r); 
-    m[1] = 0.0f;      m[4] = 1.0f;  m[7] = 0.0f; 
-    m[2] = -sinf(r);  m[5] = 0.0f;  m[8] = cosf(r); 
+    m[0] = cosf(r);   m[3] = 0.0f;  m[6] = sinf(r);
+    m[1] = 0.0f;      m[4] = 1.0f;  m[7] = 0.0f;
+    m[2] = -sinf(r);  m[5] = 0.0f;  m[8] = cosf(r);
 
     zTransform3Vec3(m, &(camera->forward));
     zTransform3Vec3(m, &(camera->up));
@@ -139,20 +139,20 @@ void zCameraPitch(ZCamera *camera, float angle)
     z = right.z;
 
     // Unsimplified version.. keeping this around for if I ever want to allow any right vector.
-    //m[0] = (t*x*x)+c;   m[3] = (t*x*y)-s*z; m[6] = (t*x*z)+s*y; 
-    //m[1] = (t*x*y)+s*z; m[4] = (t*y*y)+c;   m[7] = (t*y*z)-s*x; 
-    //m[2] = (t*x*z)-s*y; m[5] = (t*y*z)+s*x; m[8] = (t*z*z)+c; 
+    //m[0] = (t*x*x)+c;   m[3] = (t*x*y)-s*z; m[6] = (t*x*z)+s*y;
+    //m[1] = (t*x*y)+s*z; m[4] = (t*y*y)+c;   m[7] = (t*y*z)-s*x;
+    //m[2] = (t*x*z)-s*y; m[5] = (t*y*z)+s*x; m[8] = (t*z*z)+c;
 
-    m[0] = (t*x*x)+c; m[3] = -s*z; m[6] = (t*x*z); 
-    m[1] = s*z;       m[4] = c;    m[7] = -s*x; 
-    m[2] = (t*x*z);   m[5] = s*x;  m[8] = (t*z*z)+c; 
+    m[0] = (t*x*x)+c; m[3] = -s*z; m[6] = (t*x*z);
+    m[1] = s*z;       m[4] = c;    m[7] = -s*x;
+    m[2] = (t*x*z);   m[5] = s*x;  m[8] = (t*z*z)+c;
 
     zTransform3Vec3(m, &(camera->forward));
     zTransform3Vec3(m, &(camera->up));
 
     // Make sure the world never turns up-side down: If the up vector points downward, project it to
     // the y=0 plane, make forward vector perpendicular again and re-normalize.
-    
+
     //assert(angle < 90.0f); // This code would barf if the rotation was bigger than 90 degrees.
 
     if (camera->up.y < 0.0f) {
@@ -219,7 +219,7 @@ void zCameraUpdate(ZCamera *camera, float tdelta)
             zCameraPitch(camera, tmp*controller.pitch_delta);
             zCameraYaw(camera, tmp*controller.yaw_delta);
         }
-        
+
         if (flags & Z_CONTROL_ZOOM ) {
 
             camera->fov += tmp*controller.pitch_delta;
@@ -241,7 +241,7 @@ void zCameraApplyProjection(ZCamera *camera)
     glLoadIdentity();
 
 
-    //ratio = (float) viewport_width / (float) viewport_height; 
+    //ratio = (float) viewport_width / (float) viewport_height;
     //glOrtho(-1.0*ratio, 1.0*ratio, -1.0, 1.0, 0.1, 100.0);
     gluPerspective(camera->fov, (float) viewport_width / (float) viewport_height,
         r_nearplane, r_farplane);

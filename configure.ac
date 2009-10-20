@@ -74,13 +74,13 @@ AC_ARG_ENABLE(
 if test "x$enable_debug" = xyes; then
     AC_DEFINE([DEBUG], [], [Compile with debugging features])
     dnl I am not entirely sure if I should add -g to CFLAGS here, it's added by default, unless the
-    dnl user specified custom CFLAGS. 
+    dnl user specified custom CFLAGS.
 fi
 
 dnl Add a few things to CFLAGS. Maybe I shouldnt bother with the warnings, since they are only
 dnl relevant to me?
 CFLAGS="$CFLAGS -ffast-math -Wall -Wdeclaration-after-statement -Wsign-compare"
-   
+
 
 
 dnl Output files -----------------------------------------------------------------------------------

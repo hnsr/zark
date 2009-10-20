@@ -91,7 +91,7 @@ static int zGrowTextBuffer(ZTextBuffer *textbuf, unsigned int bytes)
     textbuf->bufsize    = reqsize;
     textbuf->buf        = tmp;
     textbuf->buf_shadow = tmp_shadow;
-    
+
     if (init) textbuf->buf[0] = '\0'; // Must null-terminate buffer on initial alloc.
 
     return 1;
@@ -125,7 +125,7 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
 
             // Make sure str fits.
             if (zGrowTextBuffer(textbuf, len)) {
-                
+
                 // Copy stuff after cursorpos to shadow buffer, insert stuff at cursorpos, copy
                 // string in shadow buffer back.
 
@@ -426,7 +426,7 @@ void zDispatchKeyEvent(const ZKeyEvent *zkev)
     } else {
 
         ZKeyEvent *cur = pressed_keys, **prevptr = &pressed_keys;
-        
+
         // Go through pressed_keys and run keybinding if the keysym matches (ignoring modmask).
         while (cur) {
 
@@ -467,9 +467,9 @@ static int zGrowKeyBindingsArray(void)
 
     // Check if we need to either initially alloc the array, or grow it.
     if (keybindings_size == 0) {
-        
+
         keybindings = malloc( sizeof(ZKeyBinding) * 50);
-        
+
         if (keybindings == NULL) {
             // Failed to allocate, simply skip adding this key binding and happily continue.
             zDebug("%s:%s: Failed to alloc memory for keybindings array.", __FILE__, __LINE__);

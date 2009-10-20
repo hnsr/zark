@@ -55,6 +55,8 @@ extern ZVariable variables[];
 
 const char *zVariableType(ZVariableType type);
 
+int zVarIsDefault(ZVariable *var);
+
 ZVariable *zLookupVariable(const char *name);
 
 int zLoadVariables(const char *file);

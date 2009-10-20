@@ -72,7 +72,7 @@ void zPrintInputStuff(unsigned int what)
                 zDebug("    current value: %d", *((int *)variables[i].varptr));
 
             } else if (variables[i].type == Z_VAR_TYPE_FLOAT) {
-                
+
                 zDebug("    default value: %f", variables[i].float_default);
                 zDebug("    current value: %f", *((float *)variables[i].varptr));
 
@@ -198,15 +198,26 @@ void zDebug(char *format, ...)
 #endif
 
 
-const char *zGetColorString(float *color)
+const char *zGetFloat3String(float *f)
 {
-    static char color_string[64];
+    static char str[32];
 
-    // This could, in theory, overflow the buffer, could use snprintf but not sure if I get that on
-    // win32 (c99)..
-    sprintf(color_string, "{ %.2f, %.2f, %.2f, %.2f }", color[0], color[1], color[2], color[3]);
+    int len = snprintf(str, 32, "{ %.2f, %.2f, %.2f }", f[0], f[1], f[2]);
 
-    return color_string;
+    assert(len < 32);
+
+    return str;
+}
+
+const char *zGetFloat4String(float *f)
+{
+    static char str[32];
+
+    int len = snprintf(str, 32, "{ %.2f, %.2f, %.2f, %.2f }", f[0], f[1], f[2], f[3]);
+
+    assert(len < 32);
+
+    return str;
 }
 
 
@@ -240,11 +251,7 @@ char *zGetFileExtension(const char *filename)
 // Rewrite directory separators to native ones in path.
 void zRewriteDirsep(char *path)
 {
-    //char *start = path;
-    
     assert(path);
-
-    //zDebug("Replacing dirseps in \"%s\".", path);
 
     while (*path != '\0') {
 
@@ -253,8 +260,6 @@ void zRewriteDirsep(char *path)
 
         path++;
     }
-
-    //zDebug("  result: \"%s\".", start);
 }
 
 
@@ -303,8 +308,9 @@ const char *zGetSiblingPath(const char *filename, const char *sibling)
 // FORCEUSER is given, this will the user data directory. If TRYUSER is given, 'datadir' will be the
 // user data directory if the file exists there, or the system data directory otherwise. If neither
 // flag is given it will always be the system data dir. Returns NULL if the path's length exceeded
-// Z_PATH_SIZE-1. If flags has Z_FILE_REWRITE_DIRSEP set, directory seperators are rewritten to
-// those native of the platform.
+// Z_PATH_SIZE-1 or if FORCEUSER was specified, and the user data directory could not be determined.
+// If flags has Z_FILE_REWRITE_DIRSEP set, directory seperators are rewritten to those native of
+// the platform.
 // XXX: Maybe I should just make Z_FILE_REWRITE_DIRSEP default, overhead of rewriting is going to be
 // nothing compared to processing the file and doing it by default should make things simpler and
 // more foolproof.. I think
@@ -313,19 +319,26 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
     static char path[Z_PATH_SIZE];
     char *userdir = zGetUserDir();
     size_t reqsize = 0;
+    size_t prefix_len = prefix ? strlen(prefix) : 0;
+    size_t filename_len = filename ? strlen(filename) : 0;
 
-    assert(filename && strlen(filename));
+    assert(filename_len && strlen(Z_DIR_SYSDATA));
 
     // Truncate or else we append to the path constructed on the previous invocation.
     path[0] = '\0';
 
-    // Try looking for file in user directory first if desired.
-    if (flags & (Z_FILE_TRYUSER | Z_FILE_FORCEUSER)) {
+    // As a special case, just return NULL if FORCEUSER was specified and userdir is invalid.
+    if (flags & Z_FILE_FORCEUSER && !userdir)
+        return NULL;
+
+    // Try looking for file in user directory first if desired (and if userdir is valid).
+    if ( userdir && (flags & (Z_FILE_TRYUSER | Z_FILE_FORCEUSER)) ) {
+
 
         // Check that the full path doesn't exceed Z_PATH_SIZE.
         reqsize += strlen(userdir) + 1; // +1 for directory separator.
-        if (prefix && strlen(prefix) > 0) reqsize += strlen(prefix) + 1;
-        reqsize += strlen(filename);
+        reqsize += prefix_len ? prefix_len + 1 : 0;
+        reqsize += filename_len;
 
         if (reqsize >= Z_PATH_SIZE) {
             zError("%s: Resulting file path too long for file \"%s\" with prefix \"%s\".", __func__,
@@ -335,20 +348,19 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
 
         strcat(path, userdir);
         strcat(path, Z_DIR_SEPARATOR);
-        if (prefix) {
+        if (prefix_len) {
             strcat(path, prefix);
             strcat(path, Z_DIR_SEPARATOR);
         }
-
         strcat(path, filename);
 
+        // Just in case prefix (and/or filename?) contained non-native dirseps.
         if (flags & Z_FILE_REWRITE_DIRSEP)
             zRewriteDirsep(path);
 
-        if (zFileExists(path) || (flags & Z_FILE_FORCEUSER))
+        // Return path unconditionally if FORCEUSER was given, else check for existance.
+        if ( (flags & Z_FILE_FORCEUSER) || (zPathExists(path) == Z_EXISTS_REGULAR) )
             return path;
-
-        //zDebug("%s: \"%s\" doesn't exist, trying system data directory.", __func__, path);
     }
 
     // Same thing but this time for the system root dir.
@@ -356,8 +368,8 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
     path[0] = '\0';
 
     reqsize += strlen(Z_DIR_SYSDATA) + 1;
-    if (prefix && strlen(prefix) > 0) reqsize += strlen(prefix) + 1;
-    reqsize += strlen(filename);
+    reqsize += prefix_len ? prefix_len + 1 : 0;
+    reqsize += filename_len;
 
     if (reqsize >= Z_PATH_SIZE) {
         zError("%s: Resulting file path too long for file \"%s\" with prefix \"%s\".", __func__,
@@ -367,7 +379,7 @@ const char *zGetPath(const char *filename, const char *prefix, int flags)
 
     strcat(path, Z_DIR_SYSDATA);
     strcat(path, Z_DIR_SEPARATOR);
-    if (prefix) {
+    if (prefix_len) {
         strcat(path, prefix);
         strcat(path, Z_DIR_SEPARATOR);
     }
@@ -506,7 +518,7 @@ char *zUTF8FindPrevChar(const char *src, const char *pos)
 char *zUTF8FindNextChar(const char *pos)
 {
     while (*pos != '\0') {
-        
+
         pos++;
 
         // If the next character is not a continuation byte, we've reached the next character.
@@ -531,7 +543,7 @@ float zFrameTime(void)
 
     // Don't risk sleeping too long.
     #define FPS_SLEEP_MARGIN 1.0f
-    
+
     // To limit the FPS, we loop until the time that has passed since we last started drawing a
     // frame (frame_time) is equal to or larger than the 'ideal' time of each frame (1000/r_maxfps).
     // If we haven't reached ideal frame time yet, see if there's enough time left to throw in a
@@ -547,7 +559,7 @@ float zFrameTime(void)
 
             this_time = zGetTimeMS();
             frame_time = this_time - last_time;
-            
+
             //zDebug("this_time %.2f, frame_time, %.2f", this_time, frame_time);
 
             // See if we are at or over the ideal frame time. The amount of time we over- or under-
@@ -573,7 +585,7 @@ float zFrameTime(void)
 
     // Keep track of FPS, even if printfps is 0...
     if (this_time >= next_fps_print) {
-        
+
         dframes = frame_count - last_fps_frame_count;
         dtime = this_time - last_fps_time;
 

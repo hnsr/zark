@@ -68,7 +68,7 @@ typedef struct ZMaterial
     ZTexture *diffuse_map;
     ZTexture *normal_map;
     ZTexture *specular_map;
-    
+
     // Shaders
     char vertex_shader[Z_RESOURCE_NAME_SIZE];
     char fragment_shader[Z_RESOURCE_NAME_SIZE];

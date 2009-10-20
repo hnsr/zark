@@ -43,7 +43,7 @@ static void zDeleteShaderPrograms(void)
     ZShaderProgram *cur, *tmp;
 
     for (i = 0; i < Z_SHADER_HASH_SIZE; i++) {
-        
+
         cur = programs[i];
 
         while (cur != NULL) {
@@ -100,7 +100,7 @@ void zUpdateShaderProgram(ZShaderProgram *program)
         if (program->uniforms[Z_UNIFORM_TIME] >= 0)
             glUniform1f(program->uniforms[Z_UNIFORM_TIME], time_elapsed);
     }
-    
+
     // If this shader has never been updated, set samplers as well
     if (program->frame_updated == 0) {
 
@@ -113,7 +113,7 @@ void zUpdateShaderProgram(ZShaderProgram *program)
 
         if (program->uniforms[Z_UNIFORM_SAMPLER_S] >= 0)
             glUniform1i(program->uniforms[Z_UNIFORM_SAMPLER_S], 2);
-            
+
     }
 
     // Update stuff for newly loaded scenes.
@@ -179,11 +179,11 @@ static ZShader *zCompileShader(unsigned int flags, const char *sourcefile, GLenu
     glGetShaderiv(shader_object, GL_COMPILE_STATUS, &shader_compiled);
 
     if (r_shaderlog || !shader_compiled) {
-        
+
         GLint log_length;
-   
+
         glGetShaderiv(shader_object, GL_INFO_LOG_LENGTH, &log_length);
-        
+
         if (log_length > 1) {
 
             char *log;
@@ -307,11 +307,11 @@ static ZShaderProgram *zLinkProgram(unsigned int flags, ZShader *vshader, ZShade
     glGetProgramiv(handle, GL_VALIDATE_STATUS, &validate_status);
 
     if (r_shaderlog || !validate_status) {
-        
+
         GLint log_length;
-   
+
         glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &log_length);
-        
+
         if (log_length > 1) {
 
             char *log;
@@ -369,7 +369,7 @@ ZShader *zLookupShader(unsigned int flags, const char *shader, int type)
     }
 
     // Not found, so load/add it.
-    if (type == Z_SHADER_VERTEX) {    
+    if (type == Z_SHADER_VERTEX) {
         new = zCompileShader(flags, shader, GL_VERTEX_SHADER);
     } else if (type == Z_SHADER_FRAGMENT) {
         new = zCompileShader(flags, shader, GL_FRAGMENT_SHADER);
@@ -413,7 +413,7 @@ ZShaderProgram *zLookupShaderProgram(unsigned int flags, const char *vshader, co
 
     while (cur != NULL) {
         // Check if flags and shader names match.
-        if ( cur->flags == flags && strcmp(cur->vertex_shader, vshader) == 0 && 
+        if ( cur->flags == flags && strcmp(cur->vertex_shader, vshader) == 0 &&
              strcmp(cur->fragment_shader, fshader) == 0  ) {
             return cur;
         }
@@ -459,7 +459,7 @@ void zIterShaderPrograms(void (*iter)(ZShaderProgram *, void *), void *data)
     ZShaderProgram *cur;
 
     for (i = 0; i < Z_SHADER_HASH_SIZE; i++) {
-        
+
         cur = programs[i];
 
         while (cur != NULL) {
@@ -477,7 +477,7 @@ void zIterShaders(void (*iter)(ZShader *, void *), void *data)
     ZShader *cur;
 
     for (i = 0; i < Z_SHADER_HASH_SIZE; i++) {
-        
+
         cur = shaders[i];
 
         while (cur != NULL) {

@@ -43,7 +43,7 @@
                 exit(EXIT_FAILURE); \
             }
     #else
-        #define assert(x)         
+        #define assert(x)
     #endif
 
     // TODO: Define this in config.h, or maybe just get rid of config.h for win32 and put it all in

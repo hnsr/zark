@@ -3,6 +3,8 @@
 
 // Anything OS specific goes in here (some file access bits, windowing, input, timing etc).
 
+#define Z_EXISTS_REGULAR 1
+#define Z_EXISTS_DIR     2
 
 // Attempt to sleep for nsecs nanoseconds. Nothing is guaranteed.
 void zSleep(float ms);
@@ -16,7 +18,7 @@ void zOpenWindow(int width, int height);
 // Close our window.
 void zCloseWindow(void);
 
-// Enable/disable text input, only call after a window has been opened. 
+// Enable/disable text input, only call after a window has been opened.
 void zEnableTextInput(ZTextInputCallback cb);
 void zDisableTextInput(void);
 
@@ -37,13 +39,13 @@ void zProcessEvents(void);
 // OS-specific clean up.
 void zShutdown(void);
 
-// Return pointer to user data directory (i.e. C:\Windows\Users\<user>\Documents\Zark on Win32 or
-// /home/<user>/.zark on *nix). The string returned is is statically allocated and should not be
-// freed or modified. Always returns a valid pointer though the string may be empty.
+// Return pointer to statically allocated string with the path to the user data directory (i.e.
+// C:\Windows\Users\<user>\Documents\zark on Windows or /home/<user>/.zark on *nix), or NULL if the
+// user directory could not be determined, or created (if it didn't exist).
 char *zGetUserDir(void);
 
-// Returns 1 if path exists and is a regular file.
-int zFileExists(const char *path);
+// Returns one of Z_EXISTS_* (depending on type of file), or 0 if path doesn't exist.
+int zPathExists(const char *path);
 
 // Returns strings for each regular file found in directory 'path' (path is relative to data
 // directory). Returns NULL when no more files are found. This function should only be called in a

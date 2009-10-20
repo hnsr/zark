@@ -198,10 +198,10 @@ void zMaterialInfo(ZMaterial *mtl)
     else if (mtl->blend_type == Z_MTL_BLEND_ADD)   zPrint("additive\n");
     else zPrint("unknown?\n");
 
-    zPrint("  ambient_color:   %s\n", zGetColorString(mtl->ambient_color));
-    zPrint("  diffuse_color:   %s\n", zGetColorString(mtl->diffuse_color));
-    zPrint("  specular_color:  %s\n", zGetColorString(mtl->specular_color));
-    zPrint("  emission_color:  %s\n", zGetColorString(mtl->emission_color));
+    zPrint("  ambient_color:   %s\n", zGetFloat4String(mtl->ambient_color));
+    zPrint("  diffuse_color:   %s\n", zGetFloat4String(mtl->diffuse_color));
+    zPrint("  specular_color:  %s\n", zGetFloat4String(mtl->specular_color));
+    zPrint("  emission_color:  %s\n", zGetFloat4String(mtl->emission_color));
     zPrint("  shininess:       %.2f\n", mtl->shininess);
 
     zPrint("  texture wrap:    ");
@@ -234,7 +234,7 @@ void zIterMaterials(void (*iter)(ZMaterial *, void *), void *data)
     ZMaterial *cur;
 
     for (i = 0; i < Z_MTL_HASH_SIZE; i++) {
-        
+
         cur = materials[i];
 
         while (cur != NULL) {
@@ -425,7 +425,7 @@ static void zSetTextureParams(ZMaterial *mat, ZTexture *tex)
     int bound = 0;
 
     if (!tex) return;
-    
+
     assert(tex->gltexname > 0);
 
     if (mat->wrap_mode != tex->wrap_mode) {
@@ -520,7 +520,7 @@ void zMakeMaterialActive(ZMaterial *mat)
     if (mat->program)
         zUpdateShaderProgram(mat->program);
 
-  
+
     previous_mat = mat;
 }
 
@@ -633,7 +633,7 @@ static void zAddTexture(ZTexture *tex)
 // Load texture and add to texture list. Returns pointer to loaded texture or NULL on error.
 static ZTexture *zLoadTexture(const char *name)
 {
-    ZTexture *tex; 
+    ZTexture *tex;
     ZImage *img;
     int namelen;
 
@@ -739,7 +739,7 @@ void zDeleteTextures(void)
     ZTexture *cur, *tmp;
 
     for (i = 0; i < Z_TEX_HASH_SIZE; i++) {
-        
+
         cur = textures[i];
 
         while (cur != NULL) {
@@ -761,7 +761,7 @@ void zIterTextures(void (*iter)(ZTexture *, void *), void *data)
     ZTexture *cur;
 
     for (i = 0; i < Z_TEX_HASH_SIZE; i++) {
-        
+
         cur = textures[i];
 
         while (cur != NULL) {

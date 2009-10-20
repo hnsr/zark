@@ -96,7 +96,7 @@ void zBuildTangentArray(ZMesh *mesh, int bitangent)
 {
     unsigned int i, count;
     ZVec3 t, b;
-    ZTangentT  *tangents_t; 
+    ZTangentT  *tangents_t;
     ZTangentTB *tangents_tb;
     ZVertexTNV *vertices = (ZVertexTNV *) mesh->vertices;
     size_t tangent_size = bitangent ? sizeof(ZTangentTB) : sizeof(ZTangentT);
@@ -147,7 +147,7 @@ void zBuildTangentArray(ZMesh *mesh, int bitangent)
                 &(vertices[mesh->indices[i+2]].vt)
             );
 
-            // Add up the calculated tangent(s) in the tangent array. 
+            // Add up the calculated tangent(s) in the tangent array.
             if (bitangent) {
                 zAddVec3(&(tangents_tb[mesh->indices[i  ]].t), &t);
                 zAddVec3(&(tangents_tb[mesh->indices[i  ]].b), &b);
@@ -307,7 +307,7 @@ void zIterMeshes(void (*iter)(ZMesh *, void *), void *data)
     ZMesh *cur;
 
     for (i = 0; i < Z_MESH_HASH_SIZE; i++) {
-        
+
         cur = meshes[i];
 
         while (cur != NULL) {
@@ -389,7 +389,7 @@ void zDrawMesh(ZMesh *mesh)
                 glBindBufferARB(GL_ARRAY_BUFFER, mesh->tangent_vbo_name);
 
                 if (mesh->flags & Z_MESH_HAS_BITANGENTS && bitangent_loc >= 0) {
-                    
+
                     glEnableVertexAttribArray(bitangent_loc);
                     glVertexAttribPointer(bitangent_loc, 3, GL_FLOAT, GL_FALSE, sizeof(float)*6,
                         (void *) (sizeof(float)*3));
@@ -400,7 +400,7 @@ void zDrawMesh(ZMesh *mesh)
                     glEnableVertexAttribArray(tangent_loc);
                     glVertexAttribPointer(tangent_loc, 3, GL_FLOAT, GL_FALSE,
                         sizeof(float) * ((mesh->flags & Z_MESH_HAS_BITANGENTS)?6:0), 0);
-                    
+
                 }
 
             }
@@ -463,7 +463,7 @@ void zDrawMesh(ZMesh *mesh)
 
     // Draw tangent vectors.
     if ( (r_drawtangents) && mesh->tangents ) {
-        
+
         ZVec3 *v, *t, *b;
 
         // Draw lines between vertex and vertex+tangent.
@@ -574,7 +574,7 @@ int zGrowMeshBuffers(ZMesh *mesh, int type)
 
         if (mesh->num_vertices == mesh->vertices_size) {
 
-            float *tmp = (float *) realloc(mesh->vertices, (mesh->vertices_size + 
+            float *tmp = (float *) realloc(mesh->vertices, (mesh->vertices_size +
                 Z_MESH_VERTICES_BUFINC) * mesh->elem_size * sizeof(float) );
 
             if (!tmp) {
@@ -619,7 +619,7 @@ void zMeshInfo(ZMesh *mesh)
     if (!mesh) return;
 
     zPrint("Dumping info on mesh \"%s\":\n", mesh->name);
-    
+
     zPrint("  %u vertices (%u bytes)\n", mesh->num_vertices, mesh->num_vertices * mesh->elem_size *
          sizeof(float));
 

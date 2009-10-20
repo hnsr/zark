@@ -280,7 +280,7 @@ int zCmdHelp(const ZParsedCommand *pcmd)
         } else if (var->type == Z_VAR_TYPE_STRING) {
             zPrint("  current: %s\n", (char *)var->varptr);
             zPrint("  default: %s\n", var->str_default);
-        } 
+        }
         // TODO: Add support for float3/4.
 
         return 1;
@@ -298,7 +298,7 @@ int zCmdQuit(const ZParsedCommand *pcmd)
 }
 
 
-int zCmdEcho(const ZParsedCommand *pcmd) 
+int zCmdEcho(const ZParsedCommand *pcmd)
 {
     if (pcmd->numargs == 1) {
         zPrint("%s\n", pcmd->args[0].str_arg);
@@ -499,7 +499,7 @@ int zCmdLoadScene(const ZParsedCommand *pcmd)
 
     if ((scene = zLoadScene(pcmd->args[0].str_arg)))
         scene->camera = cam;
-    
+
     return 1;
 }
 
@@ -829,7 +829,7 @@ int zCmdSet(const ZParsedCommand *pcmd)
         if (s == NULL) return 1;
 
         len = MIN(Z_VAR_STRING_SIZE-1, strlen(s));
-        memcpy((void *)var->varptr, s, len+1); 
+        memcpy((void *)var->varptr, s, len+1);
 
         // This is needed in case the string was truncated, last char won't be a \0
         ((char *)var->varptr)[Z_VAR_STRING_SIZE-1] = '\0';
@@ -858,7 +858,7 @@ int zCmdGet(const ZParsedCommand *pcmd)
         zError("No valid variable name was given.");
         return 0;
     }
-    
+
     switch (var->type) {
 
     case Z_VAR_TYPE_INT:

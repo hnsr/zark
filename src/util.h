@@ -37,7 +37,10 @@ void zWarning(char *format, ...);
 void zDebug(char *format, ...);
 #endif
 
-const char *zGetColorString(float *color);
+// Pretty printing
+const char *zGetFloat3String(float *f);
+
+const char *zGetFloat4String(float *f);
 
 
 // File stuff

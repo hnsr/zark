@@ -144,9 +144,9 @@ void zAddMatrix3(float *a, float *b)
 void zAddMatrix4(float *a, float *b)
 {
     a[0]+=b[0]; a[4]+=b[4]; a[8] +=b[8];  a[12]+=b[12];
-    a[1]+=b[1]; a[5]+=b[5]; a[9] +=b[9];  a[13]+=b[13]; 
-    a[2]+=b[2]; a[6]+=b[6]; a[10]+=b[10]; a[14]+=b[14]; 
-    a[3]+=b[3]; a[7]+=b[7]; a[11]+=b[11]; a[15]+=b[15]; 
+    a[1]+=b[1]; a[5]+=b[5]; a[9] +=b[9];  a[13]+=b[13];
+    a[2]+=b[2]; a[6]+=b[6]; a[10]+=b[10]; a[14]+=b[14];
+    a[3]+=b[3]; a[7]+=b[7]; a[11]+=b[11]; a[15]+=b[15];
 }
 
 
@@ -164,10 +164,10 @@ void zScaleMatrix3(float *a, float s)
 // Scale 3x3 matrix a by s.
 void zScaleMatrix4(float *a, float s)
 {
-    a[0]*=s; a[4]*=s; a[8] *=s; a[12]*=s; 
-    a[1]*=s; a[5]*=s; a[9] *=s; a[13]*=s; 
-    a[2]*=s; a[6]*=s; a[10]*=s; a[14]*=s; 
-    a[3]*=s; a[7]*=s; a[11]*=s; a[15]*=s; 
+    a[0]*=s; a[4]*=s; a[8] *=s; a[12]*=s;
+    a[1]*=s; a[5]*=s; a[9] *=s; a[13]*=s;
+    a[2]*=s; a[6]*=s; a[10]*=s; a[14]*=s;
+    a[3]*=s; a[7]*=s; a[11]*=s; a[15]*=s;
 }
 
 
@@ -187,7 +187,7 @@ void zMultMatrix3(float *r, float *a, float *b)
     r[1] = a[1]*b[0] + a[4]*b[1] + a[7]*b[2];
     r[4] = a[1]*b[3] + a[4]*b[4] + a[7]*b[5];
     r[7] = a[1]*b[6] + a[4]*b[7] + a[7]*b[8];
-    
+
     // Row 3
     r[2] = a[2]*b[0] + a[5]*b[1] + a[8]*b[2];
     r[5] = a[2]*b[3] + a[5]*b[4] + a[8]*b[5];
@@ -206,25 +206,25 @@ void zMultMatrix4(float *r, float *a, float *b)
     r[0]  = a[0]*b[0]  + a[4]*b[1]  + a[8]*b[2]  + a[12]*b[3];
     r[4]  = a[0]*b[4]  + a[4]*b[5]  + a[8]*b[6]  + a[12]*b[7];
     r[8]  = a[0]*b[8]  + a[4]*b[9]  + a[8]*b[10] + a[12]*b[11];
-    r[12] = a[0]*b[12] + a[4]*b[13] + a[8]*b[14] + a[12]*b[15]; 
+    r[12] = a[0]*b[12] + a[4]*b[13] + a[8]*b[14] + a[12]*b[15];
 
     // Row 2
     r[1]  = a[1]*b[0]  + a[5]*b[1]  + a[9]*b[2]  + a[13]*b[3];
     r[5]  = a[1]*b[4]  + a[5]*b[5]  + a[9]*b[6]  + a[13]*b[7];
     r[9]  = a[1]*b[8]  + a[5]*b[9]  + a[9]*b[10] + a[13]*b[11];
-    r[13] = a[1]*b[12] + a[5]*b[13] + a[9]*b[14] + a[13]*b[15]; 
+    r[13] = a[1]*b[12] + a[5]*b[13] + a[9]*b[14] + a[13]*b[15];
 
     // Row 3
     r[2]  = a[2]*b[0]  + a[6]*b[1]  + a[10]*b[2]  + a[14]*b[3];
     r[6]  = a[2]*b[4]  + a[6]*b[5]  + a[10]*b[6]  + a[14]*b[7];
     r[10] = a[2]*b[8]  + a[6]*b[9]  + a[10]*b[10] + a[14]*b[11];
-    r[14] = a[2]*b[12] + a[6]*b[13] + a[10]*b[14] + a[14]*b[15]; 
+    r[14] = a[2]*b[12] + a[6]*b[13] + a[10]*b[14] + a[14]*b[15];
 
     // Row 4
     r[3]  = a[3]*b[0]  + a[7]*b[1]  + a[11]*b[2]  + a[15]*b[3];
     r[7]  = a[3]*b[4]  + a[7]*b[5]  + a[11]*b[6]  + a[15]*b[7];
     r[11] = a[3]*b[8]  + a[7]*b[9]  + a[11]*b[10] + a[15]*b[11];
-    r[15] = a[3]*b[12] + a[7]*b[13] + a[11]*b[14] + a[15]*b[15]; 
+    r[15] = a[3]*b[12] + a[7]*b[13] + a[11]*b[14] + a[15]*b[15];
 }
 
 
@@ -281,7 +281,7 @@ void zCalcTriangleTB(ZVec3 *T, ZVec3 *B, ZVec3 *v0,  ZVec3 *v1,  ZVec3 *v2,
                                          ZVec2 *vt0, ZVec2 *vt1, ZVec2 *vt2)
 {
     // Based on the derivation at http://www.terathon.com/code/tangent.html
-    // 
+    //
     // The known vectors v1-v0 and vt1-vt0 are the same vector but represented in different
     // coordinates spaces (object space and tangent space). I need to solve for the basis vectors
     // (T and B) which can be linearly combined with the components of vt1-vt0 and vt2-vt0, to yield
@@ -291,9 +291,9 @@ void zCalcTriangleTB(ZVec3 *T, ZVec3 *B, ZVec3 *v0,  ZVec3 *v1,  ZVec3 *v2,
     //      Q2 = v2-v0,
     // (s1,t1) = vt1-vt0, and
     // (s2,t2) = vt2-vt0,
-    // 
+    //
     // then the above relationship can be written as:
-    // 
+    //
     // Q1 = s1*T + t1*B
     // Q2 = s2*T + t2*B
     //
@@ -304,10 +304,10 @@ void zCalcTriangleTB(ZVec3 *T, ZVec3 *B, ZVec3 *v0,  ZVec3 *v1,  ZVec3 *v2,
     //
     // which is done by pre-multiplying both sides with the inverse of [ s1 t1 ]
     //                                                                 [ s2 t2 ]:
-    // 
+    //
     // 1/(s1*t2-t1*s2) [ t2 -t1 ] [ Q1x Q1y Q1z ] = [ Tx Ty Tz ]
     //                 [-s2  s1 ] [ Q2x Q2y Q2z ]   [ Bx By Bz ]
-    
+
     ZVec3 Q1, Q2;
     float s1, t1, s2, t2;
     float r;
@@ -376,7 +376,7 @@ void zDrawVec3(ZVec3 *v)
     glDisable(GL_LIGHTING);
     glLineWidth(1.0f);
     glPointSize(4.0f);
-    
+
     glBegin(GL_POINTS);
         glVertex3f(v->x, v->y, v->z);
     glEnd();

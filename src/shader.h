@@ -44,13 +44,13 @@ typedef struct ZShaderProgram
 {
     char vertex_shader[Z_RESOURCE_NAME_SIZE];
     char fragment_shader[Z_RESOURCE_NAME_SIZE];
-    
+
     unsigned int flags;
-    
+
     // OpenGL handle for linked program object.
     GLuint handle;
 
-    unsigned int frame_updated; // The frame number for which this shader's uniforms were most 
+    unsigned int frame_updated; // The frame number for which this shader's uniforms were most
                                 // recently updated. Since frame-counting starts at 1, 0 means that
                                 // they have enver been updated..
     unsigned int scene_updated; // Same as above but for scene loads.
