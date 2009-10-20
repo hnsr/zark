@@ -852,7 +852,7 @@ case 13:
 YY_RULE_SETUP
 #line 61 "keybindings_lex.l"
 {
-    yylineno++; 
+    yylineno++;
 
     // Always revert to initial state on newline.
     BEGIN(INITIAL);

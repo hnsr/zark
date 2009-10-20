@@ -136,7 +136,7 @@
 #define yyname      cmdstryy_yyname
 #define yyrule      cmdstryy_yyrule
 
-// Some more symbols I had to add to the list myself. 
+// Some more symbols I had to add to the list myself.
 #define yyin                cmdstryy_in
 #define yyout               cmdstryy_out
 #define yywrap              cmdstryy_wrap
@@ -1799,7 +1799,7 @@ yyreturn:
 // Parses given cmdstring into an array of ZParsedCommands. Returns number of commands parsed. The
 // parsed commands are stored in an array and *parsedcmds will be set to point to it. The caller is
 // responsible for freeing this array. Returns 0 and sets *parsedcmds to NULL when no commands could
-// be parsed, or if there was a syntax error in the cmdstring. 
+// be parsed, or if there was a syntax error in the cmdstring.
 int zParseCmdString(const char *cmdstring, ZParsedCommand **caller_parsedcmds)
 {
     int parse_result;

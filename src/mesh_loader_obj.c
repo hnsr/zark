@@ -27,10 +27,10 @@
  *    for the map_* and bump directives only the filename parameter is supported.
  *
  *  - Non-standard keywords supported are:
- *    
+ *
  *    - normalize: normalize normal vectors.
  *    - scale <scalar>: to scale vertex coordinates.
- *    
+ *
  *    For material libraries:
  *    - blend <type>: use fragment blending. Type should be one of: none, blend, add (more?).
  *    - tex_prefix <path>: prefix to for references to textues in material libraries.
@@ -184,7 +184,7 @@ static int parse_vec3(int type)
     // Increase size of buffer if neccesary.
     if (*buffer_count >= *buffer_size) {
 
-        if ( ( *buffer = (ZVec3 *) 
+        if ( ( *buffer = (ZVec3 *)
                     realloc(*buffer, (*buffer_size+OBJ_VEC3_BUFFER_INC) * sizeof(ZVec3)) ) == NULL) {
 
             zFatal("%s: Failed to (re)allocate more memory for datatype data while parsing \"%s\".",
@@ -336,7 +336,7 @@ static inline int grow_group_buffers(int type)
         if (groups[cur_group].num_vertices == groups[cur_group].vertices_size) {
 
             float *tmp = (float *) realloc(groups[cur_group].vertices,
-                (groups[cur_group].vertices_size + 
+                (groups[cur_group].vertices_size +
                 OBJ_VERTEX_BUFFER_INC) * mesh->elem_size * sizeof(float) );
 
             if (!tmp) {
@@ -509,7 +509,7 @@ static int parse_face(void)
             failed += add_vertex_to_mesh(&(face_vertices[0]), &(face_texcoords[0]), &(face_normals[0]));
             failed += add_vertex_to_mesh(&(face_vertices[1]), &(face_texcoords[1]), &(face_normals[1]));
             failed += add_vertex_to_mesh(&(face_vertices[2]), &(face_texcoords[2]), &(face_normals[2]));
-            
+
             if (failed) {
                 // Failed to add one or more vertices, just abort this face.
                 // TODO: Should rollback the failed vertices..

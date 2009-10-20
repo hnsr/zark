@@ -59,7 +59,7 @@
 }
 
 <*>\n {
-    yylineno++; 
+    yylineno++;
 
     // Always revert to initial state on newline.
     BEGIN(INITIAL);

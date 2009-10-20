@@ -891,8 +891,9 @@ char *zGetFileFromDir(const char *path)
     static HANDLE handle = INVALID_HANDLE_VALUE;
     WIN32_FIND_DATAA data;
 
-    // TODO: Convert to widechar when passing search_path to FindFirstFile, convert back to UTF8
-    // when reading from FindNextFile..
+    // TODO: Convert to widechar when passing search path to FindFirstFile, convert back to UTF8
+    // when reading from FindNextFile.. Without doing that, this may fail if path contains non-ASCII
+    // chars
 
     if (start) {
 

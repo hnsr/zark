@@ -4,7 +4,7 @@
 
 #include "common.h"
 
-/* Parser for Stanford PLY models. 
+/* Parser for Stanford PLY models.
  *
  * More info: http://local.wasp.uwa.edu.au/~pbourke/dataformats/ply/
  *
@@ -171,7 +171,7 @@ static char *parse_token(void)
 
 
 // Parse format from header.
-static void parse_format(void) 
+static void parse_format(void)
 {
     unsigned int version_major, version_minor;
 

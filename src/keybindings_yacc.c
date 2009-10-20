@@ -135,7 +135,7 @@
 #define yyname      kbyy_yyname
 #define yyrule      kbyy_yyrule
 
-// Some more symbols I had to add to the list myself. 
+// Some more symbols I had to add to the list myself.
 #define yyin                kbyy_in
 #define yyout               kbyy_out
 #define yywrap              kbyy_wrap
