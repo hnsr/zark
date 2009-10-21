@@ -14,12 +14,12 @@ static char *prevcmd;
 
 static void zTextConsoleInputHandler(ZKeyEvent *zkev, char *str)
 {
-    if (zkev && zkev->key == KEY_ESCAPE) {
+    if (zkev && zkev->key == Z_KEY_ESCAPE) {
 
         // Escape from console.
         zDisableTextConsole();
 
-    } else if (zkev && (zkev->key == KEY_ENTER || zkev->key == KEY_KP_ENTER) ) {
+    } else if (zkev && (zkev->key == Z_KEY_ENTER || zkev->key == Z_KEY_KP_ENTER) ) {
 
         zPrint("\n");
 
@@ -36,14 +36,14 @@ static void zTextConsoleInputHandler(ZKeyEvent *zkev, char *str)
             fputs("> ", stdout);
             fflush(stdout);
         }
-    } else if (zkev && zkev->key == KEY_UP) {
+    } else if (zkev && zkev->key == Z_KEY_UP) {
 
         // Copy previous command into textbuffer.
         if (prevcmd) {
             zResetTextBuffer(&cmdbuf);
             zUpdateTextBuffer(&cmdbuf, NULL, prevcmd);
         }
-    } else if (zkev && zkev->key == KEY_DOWN) {
+    } else if (zkev && zkev->key == Z_KEY_DOWN) {
 
         zResetTextBuffer(&cmdbuf);
 

@@ -6,7 +6,6 @@
 // probably change this to use dynamic memory but I won't bother until I need to
 #define Z_VAR_STRING_SIZE 256
 
-
 typedef enum ZVariableType
 {
     Z_VAR_TYPE_INVALID,
@@ -59,9 +58,9 @@ int zVarIsDefault(ZVariable *var);
 
 ZVariable *zLookupVariable(const char *name);
 
-int zLoadVariables(const char *file);
+void zLoadConfig(void);
 
-int zWriteVariables(const char *file);
+void zSaveConfig(void);
 
 
 // Set variable to val, clamped to variable's min/max.

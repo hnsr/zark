@@ -12,18 +12,21 @@ typedef enum ZKey
     #define MAKE_ENUM
     #include "keys.def"
     #undef MAKE_ENUM
-    NUM_KEYS
+    Z_NUM_KEYS
 } ZKey;
 
 
 #define Z_KEY_STATE_PRESS   1
 #define Z_KEY_STATE_RELEASE 2
+#define Z_KEY_STATE_MASK    (Z_KEY_STATE_PRESS | Z_KEY_STATE_RELEASE)
 
 #define Z_KEY_MOD_CTRL   (1 << 0)
 #define Z_KEY_MOD_LALT   (1 << 1)
 #define Z_KEY_MOD_RALT   (1 << 2)
 #define Z_KEY_MOD_SHIFT  (1 << 3)
 #define Z_KEY_MOD_SUPER  (1 << 4)
+#define Z_KEY_MOD_MASK   (Z_KEY_MOD_CTRL  | Z_KEY_MOD_LALT  | Z_KEY_MOD_RALT  |\
+                          Z_KEY_MOD_SHIFT | Z_KEY_MOD_SUPER)
 
 // ZKeyEvent - everything that needs to be known for a key event.
 typedef struct ZKeyEvent
@@ -105,12 +108,9 @@ extern ZTextInputCallback text_input_cb;
 
 
 
-
 void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str);
 
 void zResetTextBuffer(ZTextBuffer *textbuf);
-
-void zParseKeyBindings(FILE *fp, const char *filename); // Actually defined in keybindings_yacc.y.
 
 ZKeyBinding *zLookupKeyBinding(const ZKeyEvent *zkev);
 
@@ -128,8 +128,8 @@ void zDispatchKeyEvent(const ZKeyEvent *zkev);
 
 int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring);
 
-int zLoadKeyBindings(const char *filename);
+void zLoadKeyBindings(void);
 
-int zWriteKeyBindings(const char *filename);
+void zSaveKeyBindings(void);
 
 #endif

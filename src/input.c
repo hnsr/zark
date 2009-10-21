@@ -6,6 +6,11 @@
 #include <strings.h>
 #endif
 
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+
+
 #include "common.h"
 
 
@@ -16,7 +21,7 @@ struct
     char *name;
     char *desc;
 
-} keynames[NUM_KEYS] = {
+} keynames[Z_NUM_KEYS] = {
     #define MAKE_ARRAYINITS
     #include "keys.def"
     #undef MAKE_ARRAYINITS
@@ -156,7 +161,7 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
         // Handle some special keys.
         switch (zkev->key) {
 
-            case KEY_BACKSPACE:
+            case Z_KEY_BACKSPACE:
 
                 if (textbuf->cursor_bytes) {
 
@@ -172,7 +177,7 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
                 }
                 break;
 
-            case KEY_DELETE:
+            case Z_KEY_DELETE:
 
                 // Don't bother if cursor is at end of string.
                 if (textbuf->cursor_bytes != textbuf->bytes) {
@@ -187,7 +192,7 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
                 }
                 break;
 
-            case KEY_LEFT: // Move cursor to previous character.
+            case Z_KEY_LEFT: // Move cursor to previous character.
 
                 if (textbuf->cursor_bytes > 0) {
 
@@ -201,7 +206,7 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
                 }
                 break;
 
-            case KEY_RIGHT: // Move cursor to next character.
+            case Z_KEY_RIGHT: // Move cursor to next character.
 
                 // Find character position before cursor.
                 next = zUTF8FindNextChar(cursor_pos);
@@ -212,11 +217,11 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
                 assert(textbuf->cursor_bytes >= 0);
                 break;
 
-            case KEY_HOME:
+            case Z_KEY_HOME:
                 textbuf->cursor_bytes = 0;
                 break;
 
-            case KEY_END:
+            case Z_KEY_END:
                 textbuf->cursor_bytes = textbuf->bytes;
                 break;
 
@@ -264,53 +269,37 @@ ZKeyBinding *zLookupKeyBinding(const ZKeyEvent *zkev)
 
 
 
-// Lookup ZKey by keyname. keyname should be supplied without the "KEY_" prefix.
+// Lookup ZKey by keyname.
 ZKey zLookupKey(const char *keyname)
 {
     int i;
-    char *prefixed_keyname = malloc(strlen(keyname)+5);
 
-    if (prefixed_keyname == NULL) {
-        zWarning("Failed to lookup key for \"%s\", failed to allocate memory.", keyname);
-        return KEY_UNKNOWN;
-    }
+    // Might as well start at 1 (skip Z_KEY_UNKNOWN)
+    for (i = 1; i < Z_NUM_KEYS; i++) {
 
-    prefixed_keyname[0] = '\0';
-    strcat(prefixed_keyname, "KEY_");
-    strcat(prefixed_keyname, keyname);
-
-    for (i = 1; i < NUM_KEYS; i++) { // Might as well start at 1 (skip KEY_UNKNOWN)
-
-        if (strcasecmp(prefixed_keyname, zKeyName(i)) == 0) {
-
-            //zDebug("%s: found match for \"%s\": %d\n", __func__, prefixed_keyname, i);
-            free(prefixed_keyname);
+        if (strcasecmp(keyname, zKeyName(i)) == 0)
             return i;
-        }
     }
 
-    //zDebug("%s: failed to find match for \"%s\"\n", __func__, prefixed_keyname);
-
-    free(prefixed_keyname);
-    return KEY_UNKNOWN;
+    return Z_KEY_UNKNOWN;
 }
 
 
 
-// Get the short symbolic name of key ("KEY_SPACEBAR").
+// Get the short symbolic name of key ("KEY_KP_DIVIDE").
 const char *zKeyName(ZKey key)
 {
-    assert(key < NUM_KEYS);
+    assert(key < Z_NUM_KEYS);
 
     return keynames[key].name;
 }
 
 
 
-// Get description of key ("Spacebar").
+// Get description of key ("Keypad Divide").
 const char *zKeyDesc(ZKey key)
 {
-    assert(key < NUM_KEYS);
+    assert(key < Z_NUM_KEYS);
 
     return keynames[key].desc;
 }
@@ -318,13 +307,13 @@ const char *zKeyDesc(ZKey key)
 
 
 // Returns a pointer to a string containing a friendly name of the key event in the form of for
-// example "CTRL+ALT+Q press  " or "Q release". The string is allocated in static memory and should
+// example "CTRL+ALT+Q press" or "Q release". The string is allocated in static memory and should
 // not be freed. It will be modified on a subsequent call of this function.
 char *zKeyEventName(ZKeyEvent *kev)
 {
-    // I'm strcatting into a statically allocated string of fixed size. Since the maximum length of
-    // the key names are somewhat fixed this shouldnt be a problem.
-    static char name[256];
+    // I'm concatenating into a statically allocated string of fixed size. Since the maximum length
+    // of the key names are somewhat fixed this shouldnt be a problem.
+    static char name[128];
 
     name[0] = '\0';
 
@@ -334,16 +323,15 @@ char *zKeyEventName(ZKeyEvent *kev)
     if (kev->modmask & Z_KEY_MOD_SHIFT) strcat(name, "SHIFT+");
     if (kev->modmask & Z_KEY_MOD_SUPER) strcat(name, "SUPER+");
 
-    strcat(name, zKeyName(kev->key)+4);
+    strcat(name, zKeyName(kev->key)+4); // Remove KEY_ prefix.
     strcat(name, kev->keystate == Z_KEY_STATE_PRESS ? " press  " : " release");
 
     return name;
 }
 
 
-
+// Linked list of currently pressed keys (see zDispatchKeyEvent).
 static ZKeyEvent *pressed_keys;
-
 
 
 // Release currently pressed keys, and (unless skip_keybinds is set) run associated keybindings.
@@ -372,7 +360,7 @@ void zReleaseKeys(int skip_keybinds)
 
 
 
-// Add copy of keyevent to pressed_keys_left.
+// Add copy of keyevent to pressed_keys.
 static void zAddKeyPressToList(const ZKeyEvent *zkev)
 {
     ZKeyEvent *tmp, *new;
@@ -551,37 +539,188 @@ int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring)
 
 
 
-// Load keybindings from file. Returns 0 on error, 1 otherwise.
-int zLoadKeyBindings(const char *filename)
+// Process keybinding. This is called from two proxy functions keyup/keydown that indicate the
+// keystate as the parameters, and passes on the other parameters iven by the user. The user should
+// pass to keybind/keyup the key name, a command string, and zero or more modifier key names.
+static int zLuaBindKey(lua_State *L)
 {
-    FILE *fp;
-    const char *fullpath;
+    int modcount;
+    int params = lua_gettop(L);
+    ZKey key;
+    ZKeyEvent zkev;
+    const char *cmdstring;
+    char *cmdstring_copy;
 
-    // Open file for input
-    fp = zOpenFile(filename, NULL, &fullpath, Z_FILE_TRYUSER);
-
-    if (fp == NULL) {
-        zWarning("Failed to load keybindings from \"%s\".", fullpath);
+    if (params < 3 || !lua_isnumber(L, 1) || !lua_isnumber(L, 2) || !lua_isstring(L, 3) ) {
+        zLuaWarning(L, 2, "Not enough or invalid parameters for keybinding.");
         return 0;
     }
 
-    zPrint("Loading keybindings from \"%s\".\n", fullpath);
+    // Need to make a copy of the command string, for passing it to zAddKeyBinding
+    cmdstring = lua_tostring(L, 3);
+    if (!cmdstring || !strlen(cmdstring)) {
+        zLuaWarning(L, 2, "No valid command string given.");
+        return 0;
+    }
 
-    // Parse keybindings.
-    // TODO: Maybe zParseKeyBindings should return to indicate failure success as well
-    zParseKeyBindings(fp, filename);
+    cmdstring_copy = malloc(strlen(cmdstring)+1);
+    if (!cmdstring_copy) {
+        zLuaWarning(L, 2, "Failed to allocate memory for cmdstring.");
+        return 0;
+    }
+    strcpy(cmdstring_copy, cmdstring);
 
-    fclose(fp);
-    return 1;
+    key = (ZKey) lua_tonumber(L, 2);
+    if ( !(key > 0 && key < Z_NUM_KEYS) ) {
+        zLuaWarning(L, 2, "Invalid key given. %d", key);
+        return 0;
+    }
+
+    zkev.key = key;
+    zkev.keystate = ((int) lua_tonumber(L, 1)) ? Z_KEY_STATE_PRESS : Z_KEY_STATE_RELEASE;
+    zkev.modmask = 0;
+
+    // Now OR together all the extra parameters and use them as the modmask.
+    modcount = params - 3;
+    while (modcount--) {
+        zkev.modmask |= (unsigned int) lua_tonumber(L, params-modcount);
+    }
+    // Make sure only valid bits are set.
+    zkev.modmask &= Z_KEY_MOD_MASK;
+
+    //zDebug("zLuaBindKey %s, state %u, modmask %u", zKeyName(key), zkev.keystate, zkev.modmask);
+
+    if (!zAddKeyBinding(&zkev, cmdstring_copy))
+        zLuaWarning(L, 2, "Failed to add keybinding, invalid command string.");
+
+    return 0;
 }
 
 
-// If any keybindings were changed, dump keybindings to file. Returns 0 on error, 1 otherwise.
-int zWriteKeyBindings(const char *filename)
+
+// Load keybindings from file. Returns 0 on success or an error code (see zParseVariables) on
+// failure.
+static int zParseKeyBindings(const char *filename, const char *prefix, int flags)
 {
-    // TODO
-    // XXX: Maybe I should set a flag when a keybinding is changed by the user, so I don't write it
-    // if I don't have to.
+    int i;
+    const char *path = zGetPath(filename, prefix, flags);
+    lua_State *L;
+
+    if (!path) {
+        zWarning("%s: Failed to construct path for \"%s\".", __func__, filename);
+        return Z_PARSE_ERROR;
+    }
+
+    if (zPathExists(path) != Z_EXISTS_REGULAR)
+        return Z_PARSE_FILEERROR;
+
+
+    zPrint("Loading keybindings from \"%s\".\n", path);
+
+    L = luaL_newstate();
+    lua_pushcfunction(L, luaopen_base);
+    lua_call(L, 0, 0);
+
+    // Export all the keys and modifiers as globals.
+    for (i = 0; i < Z_NUM_KEYS; i++) {
+        lua_pushinteger(L, i);
+        lua_setglobal(L, zKeyName(i));
+    }
+
+    lua_pushinteger(L, Z_KEY_MOD_CTRL);  lua_setglobal(L, "MOD_CTRL");
+    lua_pushinteger(L, Z_KEY_MOD_LALT);  lua_setglobal(L, "MOD_LALT");
+    lua_pushinteger(L, Z_KEY_MOD_RALT);  lua_setglobal(L, "MOD_RALT");
+    lua_pushinteger(L, Z_KEY_MOD_SHIFT); lua_setglobal(L, "MOD_SHIFT");
+    lua_pushinteger(L, Z_KEY_MOD_SUPER); lua_setglobal(L, "MOD_SUPER");
+
+    // I make sure bindkey can't be called directly so the call stack level I pass to zLuaWarning
+    // always refers to the right chunk.
+    lua_register(L, "bindkey", zLuaBindKey);
+    zLua(L, "local b = bindkey\n"
+            "keydown = function(key, cmd, ...) b(1, key, cmd, ...) end\n"
+            "keyup   = function(key, cmd, ...) b(0, key, cmd, ...) end\n"
+            "bindkey = nil\n");
+
+    if (luaL_dofile(L, path)) {
+        zWarning("Failed to parse keybindings: %s", lua_tostring(L, -1));
+        lua_close(L);
+        return Z_PARSE_SYNTAXERROR;
+    }
+
+    lua_close(L);
     return 0;
+}
+
+
+
+// Same thing as with loading config (see variables.c).
+static int userkbs_badsyntax = 0;
+
+
+// Load previously saved keybindings for user, or the default one (from the system data directory)
+// if nothing has been saved yet.
+void zLoadKeyBindings(void)
+{
+    int err;
+
+    // Attempt to load for user first, if that fails, try loading from system data dir.
+    if ( (err = zParseKeyBindings(Z_FILE_KEYBINDINGS, NULL, Z_FILE_FORCEUSER)) ) {
+
+        // See if there was a syntax error.
+        userkbs_badsyntax = err == Z_PARSE_SYNTAXERROR;
+
+        zWarning("Failed to load user keybindings, falling back to default keybindings.");
+
+        if ( (err = zParseKeyBindings(Z_FILE_KEYBINDINGS, NULL, 0)) )
+            zWarning("Failed to fall back to default keybindings.");
+    }
+}
+
+
+
+// If any keybindings were changed, dump keybindings to file. Returns 0 on error, 1 otherwise.
+void zSaveKeyBindings(void)
+{
+    unsigned int i;
+    const char *path;
+    FILE *fp;
+    ZKeyBinding *kb;
+    char keyparam[32];
+
+    if (userkbs_badsyntax) {
+        zWarning("Not writing keybindings, check \"%s\" for syntax errors.", Z_FILE_KEYBINDINGS);
+        return;
+    }
+
+    if ( !(fp = zOpenFile(Z_FILE_KEYBINDINGS, NULL, &path, Z_FILE_FORCEUSER | Z_FILE_WRITE)) ) {
+        zWarning("Failed to open \"%s\" for writing keybindings.", path);
+        return;
+    }
+
+    zPrint("Writing keybindings to \"%s\".\n", path);
+
+    for (i = 0; i < numkeybindings; i++) {
+
+        kb = keybindings+i;
+
+        // Looks better if the comma follows the key name directly!
+        assert(strlen(zKeyName(kb->keyevent.key)) < 31);
+        strcpy(keyparam, zKeyName(kb->keyevent.key));
+        strcat(keyparam, ",");
+
+        if (kb->keyevent.keystate == Z_KEY_STATE_RELEASE)
+            fprintf(fp, "keyup  (%-15s \"%s\"", keyparam, kb->cmdstring);
+        else
+            fprintf(fp, "keydown(%-15s \"%s\"", keyparam, kb->cmdstring);
+
+        if (kb->keyevent.modmask & Z_KEY_MOD_CTRL)  fprintf(fp, ", MOD_CTRL");
+        if (kb->keyevent.modmask & Z_KEY_MOD_LALT)  fprintf(fp, ", MOD_LALT");
+        if (kb->keyevent.modmask & Z_KEY_MOD_RALT)  fprintf(fp, ", MOD_RALT");
+        if (kb->keyevent.modmask & Z_KEY_MOD_SHIFT) fprintf(fp, ", MOD_SHIFT");
+        if (kb->keyevent.modmask & Z_KEY_MOD_SUPER) fprintf(fp, ", MOD_SUPER");
+        fprintf(fp, ")\n");
+    }
+
+    fclose(fp);
 }
 

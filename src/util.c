@@ -33,7 +33,7 @@ void zPrintInputStuff(unsigned int what)
     if (what & Z_INPUT_KEYS) {
 
         zDebug("Listing all defined keys:");
-        for (i=0; i<NUM_KEYS; i++) {
+        for (i = 0; i < Z_NUM_KEYS; i++) {
             zDebug("  ZKey %d: %s (%s)", i, zKeyName(i), zKeyDesc(i));
         }
         zDebug("");

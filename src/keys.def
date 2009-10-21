@@ -1,19 +1,15 @@
-// More macro magic for keys (see settings.def for how/why).
+// More macro magic for keys.
 
 #if defined(MAKE_ENUM)
-
-    #define key(symbol, description) symbol,
-
+    #define key(symbol, description) Z_##symbol,
 #elif defined(MAKE_ARRAYINITS)
-
     #define key(symbol, description) {#symbol, description},
-
 #else
     #error Included keys.def without required MAKE_ macro set
 #endif
 
 
-key(KEY_UNKNOWN,     "Uknown")
+key(KEY_UNKNOWN,     "Unknown")
 
 // Must use alphanumerical order here since it makes mapping from OS key symbols to ZKey easier.
 key(KEY_0,           "0")

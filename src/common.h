@@ -78,6 +78,12 @@
 #define MIN(x, y) ((x)<(y) ? (x):(y))
 #endif
 
+// Error codes for functions that parse keybindings/vars etc.
+#define Z_PARSE_ERROR        1
+#define Z_PARSE_FILEERROR    2
+#define Z_PARSE_SYNTAXERROR  3
+
+
 // Size of array for storing names of recources (meshes, textures, materials etc.)
 #define Z_RESOURCE_NAME_SIZE 128
 

@@ -60,7 +60,6 @@ static void zDrawFrame(void)
 int zMain(int argc, char** argv)
 {
     float frame_time;
-    int vars_loaded;
 
     zPrint("%s starting up...\n", PACKAGE_STRING);
 
@@ -68,8 +67,8 @@ int zMain(int argc, char** argv)
     iluInit();
 
     zLoadMaterials();
-    vars_loaded = zLoadVariables(Z_FILE_CONFIG);
-    zLoadKeyBindings(Z_FILE_KEYBINDINGS);
+    zLoadConfig();
+    zLoadKeyBindings();
     zLoadCommands(Z_FILE_STARTUP);
 
     zOpenWindow(r_winwidth, r_winheight);
@@ -92,12 +91,8 @@ int zMain(int argc, char** argv)
         scene = NULL;
     }
 
-    if (vars_loaded)
-        zWriteVariables(Z_FILE_CONFIG);
-    else
-        zWarning("Not writing variables, check \"%s\" for syntax errors.", Z_FILE_CONFIG);
-
-    zWriteKeyBindings(Z_FILE_KEYBINDINGS);
+    zSaveConfig();
+    zSaveKeyBindings();
 
     zCloseWindow();
     zShutdown();

@@ -61,64 +61,64 @@ static unsigned int zGetWinModMask(void)
 // otherwise.
 static int zHandleMouseEvents(UINT message, WPARAM wparam, LPARAM lparam, ZKeyEvent *zkev)
 {
-    zkev->key = KEY_UNKNOWN;
+    zkev->key = Z_KEY_UNKNOWN;
 
     switch (message) {
 
     // Mouse 1
     case WM_LBUTTONDOWN:
-        zkev->key = KEY_MOUSE1;
+        zkev->key = Z_KEY_MOUSE1;
         zkev->keystate = Z_KEY_STATE_PRESS;
         break;
     case WM_LBUTTONUP:
-        zkev->key = KEY_MOUSE1;
+        zkev->key = Z_KEY_MOUSE1;
         zkev->keystate = Z_KEY_STATE_RELEASE;
         break;
 
     // Mouse 2
     case WM_MBUTTONDOWN:
-        zkev->key = KEY_MOUSE2;
+        zkev->key = Z_KEY_MOUSE2;
         zkev->keystate = Z_KEY_STATE_PRESS;
         break;
     case WM_MBUTTONUP:
-        zkev->key = KEY_MOUSE2;
+        zkev->key = Z_KEY_MOUSE2;
         zkev->keystate = Z_KEY_STATE_RELEASE;
         break;
 
     // Mouse 3
     case WM_RBUTTONDOWN:
-        zkev->key = KEY_MOUSE3;
+        zkev->key = Z_KEY_MOUSE3;
         zkev->keystate = Z_KEY_STATE_PRESS;
         break;
     case WM_RBUTTONUP:
-        zkev->key = KEY_MOUSE3;
+        zkev->key = Z_KEY_MOUSE3;
         zkev->keystate = Z_KEY_STATE_RELEASE;
         break;
 
     // Mouse 8/9
     case WM_XBUTTONDOWN:
-        if (GET_XBUTTON_WPARAM(wparam) == XBUTTON1) zkev->key = KEY_MOUSE8;
-        else                                        zkev->key = KEY_MOUSE9;
+        if (GET_XBUTTON_WPARAM(wparam) == XBUTTON1) zkev->key = Z_KEY_MOUSE8;
+        else                                        zkev->key = Z_KEY_MOUSE9;
         zkev->keystate = Z_KEY_STATE_PRESS;
         break;
     case WM_XBUTTONUP:
-        if (GET_XBUTTON_WPARAM(wparam) == XBUTTON1) zkev->key = KEY_MOUSE8;
-        else                                        zkev->key = KEY_MOUSE9;
+        if (GET_XBUTTON_WPARAM(wparam) == XBUTTON1) zkev->key = Z_KEY_MOUSE8;
+        else                                        zkev->key = Z_KEY_MOUSE9;
         zkev->keystate = Z_KEY_STATE_RELEASE;
         break;
 
     // Mouse 4/5
     case WM_MOUSEWHEEL:
         zkev->keystate = Z_KEY_STATE_PRESS;
-        if ( GET_WHEEL_DELTA_WPARAM(wparam) < 0 ) zkev->key = KEY_MOUSE5;
-        else                                      zkev->key = KEY_MOUSE4;
+        if ( GET_WHEEL_DELTA_WPARAM(wparam) < 0 ) zkev->key = Z_KEY_MOUSE5;
+        else                                      zkev->key = Z_KEY_MOUSE4;
         break;
 
     // Mouse 6/7
     case WM_MOUSEHWHEEL:
         zkev->keystate = Z_KEY_STATE_PRESS;
-        if ( GET_WHEEL_DELTA_WPARAM(wparam) < 0 ) zkev->key = KEY_MOUSE7;
-        else                                      zkev->key = KEY_MOUSE6;
+        if ( GET_WHEEL_DELTA_WPARAM(wparam) < 0 ) zkev->key = Z_KEY_MOUSE7;
+        else                                      zkev->key = Z_KEY_MOUSE6;
         break;
 
     default:
@@ -141,114 +141,114 @@ static ZKey zTranslateWinKey(WPARAM wparam, LPARAM lparam)
     int is_extended = lparam & 0x1000000;
 
     // Handle A-Z/0-9 keys the easy way
-    if      (wparam >= 'A' && wparam <= 'Z') return KEY_A + (wparam - 'A');
-    else if (wparam >= '0' && wparam <= '9') return KEY_0 + (wparam - '0');
+    if      (wparam >= 'A' && wparam <= 'Z') return Z_KEY_A + (wparam - 'A');
+    else if (wparam >= '0' && wparam <= '9') return Z_KEY_0 + (wparam - '0');
 
     // Do the rest by hand.
     switch (wparam) {
 
-        case VK_ESCAPE:     return KEY_ESCAPE;
-        case VK_F1:         return KEY_F1;
-        case VK_F2:         return KEY_F2;
-        case VK_F3:         return KEY_F3;
-        case VK_F4:         return KEY_F4;
-        case VK_F5:         return KEY_F5;
-        case VK_F6:         return KEY_F6;
-        case VK_F7:         return KEY_F7;
-        case VK_F8:         return KEY_F8;
-        case VK_F9:         return KEY_F9;
-        case VK_F10:        return KEY_F10;
-        case VK_F11:        return KEY_F11;
-        case VK_F12:        return KEY_F12;
+        case VK_ESCAPE:     return Z_KEY_ESCAPE;
+        case VK_F1:         return Z_KEY_F1;
+        case VK_F2:         return Z_KEY_F2;
+        case VK_F3:         return Z_KEY_F3;
+        case VK_F4:         return Z_KEY_F4;
+        case VK_F5:         return Z_KEY_F5;
+        case VK_F6:         return Z_KEY_F6;
+        case VK_F7:         return Z_KEY_F7;
+        case VK_F8:         return Z_KEY_F8;
+        case VK_F9:         return Z_KEY_F9;
+        case VK_F10:        return Z_KEY_F10;
+        case VK_F11:        return Z_KEY_F11;
+        case VK_F12:        return Z_KEY_F12;
 
-        case VK_OEM_3:      return KEY_GRAVE;
-        case VK_OEM_MINUS:  return KEY_MINUS;
-        case VK_OEM_PLUS:   return KEY_EQUALS;
-        case VK_BACK:       return KEY_BACKSPACE;
-        case VK_TAB:        return KEY_TAB;
-        case VK_CAPITAL:    return KEY_CAPSLOCK;
+        case VK_OEM_3:      return Z_KEY_GRAVE;
+        case VK_OEM_MINUS:  return Z_KEY_MINUS;
+        case VK_OEM_PLUS:   return Z_KEY_EQUALS;
+        case VK_BACK:       return Z_KEY_BACKSPACE;
+        case VK_TAB:        return Z_KEY_TAB;
+        case VK_CAPITAL:    return Z_KEY_CAPSLOCK;
 
         // Windows doesn't seem to give a way to differentiate left/right for SHIFT.
-        case VK_SHIFT:      return KEY_LSHIFT;
+        case VK_SHIFT:      return Z_KEY_LSHIFT;
 
-        case VK_LWIN:       return KEY_LSUPER;
-        case VK_SPACE:      return KEY_SPACEBAR;
+        case VK_LWIN:       return Z_KEY_LSUPER;
+        case VK_SPACE:      return Z_KEY_SPACEBAR;
 
-        case VK_RWIN:       return KEY_RSUPER;
-        case VK_APPS:       return KEY_MENU;
+        case VK_RWIN:       return Z_KEY_RSUPER;
+        case VK_APPS:       return Z_KEY_MENU;
 
-        case VK_OEM_5:      return KEY_BACKSLASH;
-        case VK_OEM_4:      return KEY_LSQBRACKET;
-        case VK_OEM_6:      return KEY_RSQBRACKET;
-        case VK_OEM_1:      return KEY_SEMICOLON;
-        case VK_OEM_7:      return KEY_APOSTROPHE;
-        case VK_OEM_COMMA:  return KEY_COMMA;
-        case VK_OEM_PERIOD: return KEY_PERIOD;
-        case VK_OEM_2:      return KEY_SLASH;
+        case VK_OEM_5:      return Z_KEY_BACKSLASH;
+        case VK_OEM_4:      return Z_KEY_LSQBRACKET;
+        case VK_OEM_6:      return Z_KEY_RSQBRACKET;
+        case VK_OEM_1:      return Z_KEY_SEMICOLON;
+        case VK_OEM_7:      return Z_KEY_APOSTROPHE;
+        case VK_OEM_COMMA:  return Z_KEY_COMMA;
+        case VK_OEM_PERIOD: return Z_KEY_PERIOD;
+        case VK_OEM_2:      return Z_KEY_SLASH;
 
-        case VK_SNAPSHOT:   return KEY_PRTSCN; // Doesn't work for some reason.
-        case VK_SCROLL:     return KEY_SCRLK;
-        case VK_PAUSE:      return KEY_PAUSE;
+        case VK_SNAPSHOT:   return Z_KEY_PRTSCN; // Doesn't work for some reason.
+        case VK_SCROLL:     return Z_KEY_SCRLK;
+        case VK_PAUSE:      return Z_KEY_PAUSE;
 
-        case VK_NUMLOCK:    return KEY_NUMLOCK;
-        case VK_DIVIDE:     return KEY_KP_DIVIDE;
-        case VK_MULTIPLY:   return KEY_KP_MULTIPLY;
-        case VK_SUBTRACT:   return KEY_KP_SUBTRACT;
-        case VK_ADD:        return KEY_KP_ADD;
-        case VK_DECIMAL:    return KEY_KP_DELETE;
-        case VK_NUMPAD0:    return KEY_KP_0;
-        case VK_NUMPAD1:    return KEY_KP_1;
-        case VK_NUMPAD2:    return KEY_KP_2;
-        case VK_NUMPAD3:    return KEY_KP_3;
-        case VK_NUMPAD4:    return KEY_KP_4;
+        case VK_NUMLOCK:    return Z_KEY_NUMLOCK;
+        case VK_DIVIDE:     return Z_KEY_KP_DIVIDE;
+        case VK_MULTIPLY:   return Z_KEY_KP_MULTIPLY;
+        case VK_SUBTRACT:   return Z_KEY_KP_SUBTRACT;
+        case VK_ADD:        return Z_KEY_KP_ADD;
+        case VK_DECIMAL:    return Z_KEY_KP_DELETE;
+        case VK_NUMPAD0:    return Z_KEY_KP_0;
+        case VK_NUMPAD1:    return Z_KEY_KP_1;
+        case VK_NUMPAD2:    return Z_KEY_KP_2;
+        case VK_NUMPAD3:    return Z_KEY_KP_3;
+        case VK_NUMPAD4:    return Z_KEY_KP_4;
         case VK_NUMPAD5:
-        case VK_CLEAR:      return KEY_KP_5;
-        case VK_NUMPAD6:    return KEY_KP_6;
-        case VK_NUMPAD7:    return KEY_KP_7;
-        case VK_NUMPAD8:    return KEY_KP_8;
-        case VK_NUMPAD9:    return KEY_KP_9;
+        case VK_CLEAR:      return Z_KEY_KP_5;
+        case VK_NUMPAD6:    return Z_KEY_KP_6;
+        case VK_NUMPAD7:    return Z_KEY_KP_7;
+        case VK_NUMPAD8:    return Z_KEY_KP_8;
+        case VK_NUMPAD9:    return Z_KEY_KP_9;
     }
 
     // Some keys need to be mapped differently depending on the extended flag
     if ( is_extended ) {
         switch(wparam) {
-            case VK_INSERT:  return KEY_INSERT;
-            case VK_HOME:    return KEY_HOME;
-            case VK_END:     return KEY_END;
-            case VK_PRIOR:   return KEY_PGUP;
-            case VK_NEXT:    return KEY_PGDN;
+            case VK_INSERT:  return Z_KEY_INSERT;
+            case VK_HOME:    return Z_KEY_HOME;
+            case VK_END:     return Z_KEY_END;
+            case VK_PRIOR:   return Z_KEY_PGUP;
+            case VK_NEXT:    return Z_KEY_PGDN;
 
-            case VK_MENU:    return KEY_RALT;
-            case VK_CONTROL: return KEY_RCTRL;
-            case VK_DELETE:  return KEY_DELETE;
-            case VK_RETURN:  return KEY_KP_ENTER;
+            case VK_MENU:    return Z_KEY_RALT;
+            case VK_CONTROL: return Z_KEY_RCTRL;
+            case VK_DELETE:  return Z_KEY_DELETE;
+            case VK_RETURN:  return Z_KEY_KP_ENTER;
 
-            case VK_UP:      return KEY_UP;
-            case VK_DOWN:    return KEY_DOWN;
-            case VK_LEFT:    return KEY_LEFT;
-            case VK_RIGHT:   return KEY_RIGHT;
+            case VK_UP:      return Z_KEY_UP;
+            case VK_DOWN:    return Z_KEY_DOWN;
+            case VK_LEFT:    return Z_KEY_LEFT;
+            case VK_RIGHT:   return Z_KEY_RIGHT;
         }
     } else {
         switch(wparam) {
-            case VK_INSERT:  return KEY_KP_0;
-            case VK_HOME:    return KEY_KP_7;
-            case VK_END:     return KEY_KP_1;
-            case VK_PRIOR:   return KEY_KP_9;
-            case VK_NEXT:    return KEY_KP_3;
+            case VK_INSERT:  return Z_KEY_KP_0;
+            case VK_HOME:    return Z_KEY_KP_7;
+            case VK_END:     return Z_KEY_KP_1;
+            case VK_PRIOR:   return Z_KEY_KP_9;
+            case VK_NEXT:    return Z_KEY_KP_3;
 
-            case VK_MENU:    return KEY_LALT;
-            case VK_CONTROL: return KEY_LCTRL;
-            case VK_DELETE:  return KEY_KP_DELETE;
-            case VK_RETURN:  return KEY_ENTER;
+            case VK_MENU:    return Z_KEY_LALT;
+            case VK_CONTROL: return Z_KEY_LCTRL;
+            case VK_DELETE:  return Z_KEY_KP_DELETE;
+            case VK_RETURN:  return Z_KEY_ENTER;
 
-            case VK_UP:      return KEY_KP_8;
-            case VK_DOWN:    return KEY_KP_2;
-            case VK_LEFT:    return KEY_KP_4;
-            case VK_RIGHT:   return KEY_KP_6;
+            case VK_UP:      return Z_KEY_KP_8;
+            case VK_DOWN:    return Z_KEY_KP_2;
+            case VK_LEFT:    return Z_KEY_KP_4;
+            case VK_RIGHT:   return Z_KEY_KP_6;
         }
     }
 
-    return KEY_UNKNOWN;
+    return Z_KEY_UNKNOWN;
 }
 
 

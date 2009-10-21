@@ -366,8 +366,8 @@ int zCmdListKeys(const ZParsedCommand *pcmd)
     zPrint("Listing all key symbols:\n");
 
     // Start at 1 since 0 (KEY_UNKNOWN) isn't a valid key
-    for (i = 1; i < NUM_KEYS; i++) {
-        zPrint("  %3d: %-12s (%s)\n", i, zKeyName(i)+4, zKeyDesc(i));
+    for (i = 1; i < Z_NUM_KEYS; i++) {
+        zPrint("  %3d: %-12s (%s)\n", i, zKeyName(i), zKeyDesc(i));
     }
 
     zPrint("\n");

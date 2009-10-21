@@ -107,8 +107,6 @@ ZVariable *zLookupVariable(const char *name)
 
 // Called from lua when a global is set. It is passed two parameteres k, v where k is a string value
 // that names the variable to be set, and v the value, of mixed type.
-// XXX: Since I am going to need this exact function exposed in the main scripting state, I'll
-// probably need to move this to script.c or wherever at some point
 static int zLuaSet(lua_State *L)
 {
     ZVariable *var;
@@ -187,24 +185,26 @@ static int zLuaSet(lua_State *L)
 
 
 
-// Load variables from file. Returns 0 if there was parse error, 1 otherwise. If there was a parse
-// error, I should probably not subsequently call zWriteVariables, as that could cause data loss;
-// Since the parse error could have prevented lots of settings form being loaded, overwriting the
-// variables file would be a bad idea.
-int zLoadVariables(const char *file)
+// Load variables from file. Returns 0 if there were no errors, Z_PARSE_SYNTAXERROR if there was a
+// syntax error, Z_PARSE_FILEERROR if the file didn't exist, or Z_PARSE_ERROR for all other errors.
+// See zGetPath for flags and prefix.
+static int zParseVariables(const char *filename, const char *prefix, int flags)
 {
     lua_State *L;
-    const char *filename = zGetPath(file, NULL, Z_FILE_TRYUSER);
+    const char *path = zGetPath(filename, prefix, flags);
 
-    if (!filename) return 0;
-
-    if (zPathExists(filename) != Z_EXISTS_REGULAR) {
-        zWarning("Failed to read variables from \"%s\", file doesn't exist (or is not a regular"
-            " file).", filename);
-        return 1; // Returning 1, because there was no parse error.
+    if (!path) {
+        zWarning("%s: Failed to construct path for \"%s\".", __func__, filename);
+        return Z_PARSE_ERROR;
     }
 
-    zPrint("Loading variables from \"%s\".\n", filename);
+    if (zPathExists(path) != Z_EXISTS_REGULAR)
+        return Z_PARSE_FILEERROR;
+
+    // TODO: Not sure if it's right to put this zPrint here, but the caller won't know the full
+    // path (and full paths is what I want to print). I should probably just have the caller call
+    // zGetPath and make zLoadVariables work with a full path..
+    zPrint("Loading variables from \"%s\".\n", path);
 
     // Create state, expose base library and zLuaSet.
     assert(L = luaL_newstate());
@@ -218,40 +218,70 @@ int zLoadVariables(const char *file)
     zLua(L, "setmetatable(new_env, { __newindex = function (t,k,v) set(k,v) end })");
     zLua(L, "setfenv(0, new_env)");
 
-    if (luaL_dofile(L, filename)) {
-        // XXX: This doesn't (always?) print source filename/linenumber, why?
-        zWarning("lua: %s", lua_tostring(L, -1));
+    if (luaL_dofile(L, path)) {
+        zWarning("Failed to parse variables: %s", lua_tostring(L, -1));
         lua_close(L);
-        return 0;
+        return Z_PARSE_SYNTAXERROR;
     }
 
     lua_close(L);
-    return 1;
+    return 0;
+}
+
+
+
+// If there is a syntax error when loading the user configuration (i.e. because the user tweaked it
+// and made a typo), then (since not all the user's settings are loaded,) they would be lost when I
+// write the config file back on exit. Therefore I set a flag indicating if the user config had
+// syntax error, and I check for that in zDumpVariables.
+static int uservars_badsyntax = 0;
+
+// Load previously saved variables for user, or the default one (from the system data directory) if
+// nothing has been saved yet.
+void zLoadConfig(void)
+{
+    int err;
+
+    // Attempt to load for user first, if that fails, try loading from system data dir.
+    if ( (err = zParseVariables(Z_FILE_CONFIG, NULL, Z_FILE_FORCEUSER)) ) {
+
+        // See if there was a syntax error.
+        uservars_badsyntax = err == Z_PARSE_SYNTAXERROR;
+
+        zWarning("Failed to load user config, falling back to default config.");
+
+        // Now try loading it from system data dir to get some sane defaults.
+        if ( (err = zParseVariables(Z_FILE_CONFIG, NULL, 0)) )
+            zWarning("Failed to fall back to default configuration.");
+    }
 }
 
 
 
 // Dump variables with non-default values to file. File will be saved relative to DIR_USERDATA.
-// Return 1 on success, 0 on failure.
-int zWriteVariables(const char *file)
+void zSaveConfig(void)
 {
-    const char *fullpath;
+    const char *path;
+    FILE *fp;
     ZVariable *var;
     float *vec;
 
-    FILE *fp = zOpenFile(file, "", &fullpath, Z_FILE_FORCEUSER | Z_FILE_WRITE);
-
-    if (!fp) {
-        zWarning("Failed to open \"%s\" for writing variables.", fullpath);
-        return 0;
+    if (uservars_badsyntax) {
+        zWarning("Not writing config, check \"%s\" for syntax errors.", Z_FILE_CONFIG);
+        return;
     }
 
-    zPrint("Writing variables to \"%s\".\n", fullpath);
+    if ( !(fp = zOpenFile(Z_FILE_CONFIG, NULL, &path, Z_FILE_FORCEUSER | Z_FILE_WRITE)) ) {
+        zWarning("Failed to open \"%s\" for writing config.", path);
+        return;
+    }
 
-    fprintf(fp, "-- This file is automatically written on shutdown.\n-- Only change values here"
-        " (anything else will be lost).\n\n");
+    zPrint("Writing config to \"%s\".\n", path);
 
-    // Iterate over each variable, if currentval != defaultval, write it.
+    fprintf(fp, "-- This file is automatically written on exit.\n"
+                "-- Only change values here (anything else will be overwritten).\n\n");
+
+    // Iterate over each variable, write it if currentval != defaultval.
     for (var = variables; var->type != Z_VAR_TYPE_INVALID; var++) {
 
         if (!zVarIsDefault(var)) {
@@ -292,8 +322,7 @@ int zWriteVariables(const char *file)
     }
 
     fclose(fp);
-
-    return 1;
 }
+
 
 

@@ -75,17 +75,20 @@ static int zLuaMaterial(lua_State *L)
 {
     ZMaterial *newmtl;
 
-    if (!lua_istable(L, -1)) return luaL_error(L, "bad syntax, table expected");
+    if (!lua_istable(L, -1)) {
+        zLuaWarning(L, 1, "Bad syntax, table expected");
+        return 0;
+    }
 
     // Clone default material and copy over name.
     if ( !(newmtl = zNewMaterial()) ) {
-        zError("zLuaMaterial: Failed to allocate new material");
+        zLuaWarning(L, 1, "Failed to allocate new material.");
         return 0;
     }
 
     // Get name, this is the one required field..
     if (!zLuaGetDataString(L, "name", newmtl->name, Z_RESOURCE_NAME_SIZE)) {
-        zLuaWarning(L, "no valid name given for material, ignoring.");
+        zLuaWarning(L, 1, "No valid name given for material, ignoring.");
         zDeleteMaterial(newmtl);
         return 0;
     }
@@ -108,7 +111,7 @@ static int zLuaMaterial(lua_State *L)
 
     // Add material to hash table.
     if (!zAddMaterial(newmtl)) {
-        zWarning("Failed to add material \"%s\".", newmtl->name);
+        zLuaWarning(L, 1, "Failed to add material.");
         zDeleteMaterial(newmtl);
     }
     return 0;
@@ -116,7 +119,8 @@ static int zLuaMaterial(lua_State *L)
 
 
 
-// Load materials from material description files.
+// Load materials from material description files (= files with zmtl extension under "materials"
+// directory).
 void zLoadMaterials(void)
 {
     char *file;
@@ -148,8 +152,7 @@ void zLoadMaterials(void)
         zPrint("Loading materials from \"%s\".\n", file);
 
         if (luaL_dofile(L, file)) {
-            // XXX: This doesn't (always?) print source filename/linenumber, why?
-            zWarning("lua: %s", lua_tostring(L, -1));
+            zWarning("Failed to parse materials: %s", lua_tostring(L, -1));
             lua_pop(L, 1);
         }
     }
@@ -163,6 +166,7 @@ void zLoadMaterials(void)
 void zMaterialInit(void)
 {
 }
+
 
 
 // Any clean-up that needs to be done when the renderer is destroyed.

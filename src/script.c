@@ -1,32 +1,32 @@
 #include <string.h>
 #include <assert.h>
 #include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
 
 #include "common.h"
 
-// Print a warning message that includes current file, line count, and msg. Should be called from a
-// C function that is called from lua.
-void zLuaWarning(lua_State *L, const char *msg, ...)
+#if 0
+// Helper function for C functions exported to Lua, that prints a warning message that includes
+// current file, line count, and msg. Since this is typically called from a C function called by
+// user Lua code, level should probably be 1, or higher depending on how I glue things together..
+void zLuaWarning(lua_State *L, int level, const char *msg, ...)
 {
     va_list args;
-    lua_Debug dbg;
+    const char *where;
 
-    lua_getstack(L, 1, &dbg);
+    luaL_where(L, level);
+    where = lua_tostring(L, -1);
 
-    if (!lua_getinfo(L, "Sl", &dbg)) {
-        zError("%s: Failed to get lua error information.", __func__);
-        return;
-    }
-
-    fprintf(stderr, "WARNING: %s:%d: ", dbg.short_src, dbg.currentline);
-
+    fprintf(stderr, "WARNING: %s: ", where);
     va_start(args, msg);
     vfprintf(stderr, msg, args);
     va_end(args);
-
     fprintf(stderr, "\n");
-}
 
+    return;
+}
+#endif
 
 
 // The zLuaGetData* functions are intended to make parsing of data-description files easier. Data
@@ -74,9 +74,8 @@ int zLuaGetDataString(lua_State *L, const char *key, char *dest, size_t bufsize)
 
 // Reads number from data table and stores it as unsigned int at *dest. If the value given is a
 // table instead, its members are ORed together first (i.e. for parsing flags).
-// XXX: I need to rethink wether using this for parsing flags is sensible, some values could be
-// pretty big (1<<32), and they will be stored internally in lua as doubles, not sure if I can rely
-// on there not being precision problems screwing things up.
+// XXX: As long as Lua uses doubles internally, it should be ok to use this for passing unsigned int
+// bit flags of up to 1<<31.
 int zLuaGetDataUint(lua_State *L, const char *key, unsigned int *dest)
 {
     int res = 0;
@@ -114,7 +113,7 @@ int zLuaGetDataUint(lua_State *L, const char *key, unsigned int *dest)
             if (res) *dest = flags;
 
         } else {
-            zLuaWarning(L, "bad syntax for key \"%s\", number or table containing flags expected.",
+            zLuaWarning(L, 1, "bad syntax for key \"%s\", number or table containing flags expected.",
                 key);
         }
     }
@@ -183,7 +182,7 @@ int zLuaGetDataFloats(lua_State *L, const char *key, float *dest, int count)
                 lua_pop(L, 1);
             }
         } else {
-            zLuaWarning(L, "bad syntax for key \"%s\", number or table containing numbers "
+            zLuaWarning(L, 1, "bad syntax for key \"%s\", number or table containing numbers "
                 "expected.", key);
         }
     }

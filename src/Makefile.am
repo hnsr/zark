@@ -43,9 +43,7 @@ zark_SOURCES = variables.def\
 			   scene.c\
 			   script.h\
 			   script.c\
-			   keybindings_yacc.y\
 			   cmdstring_yacc.y\
-			   keybindings_lex.c.inc\
 			   cmdstring_lex.c.inc
 
 # Using explicit rules for producing the lexer C source, since I can't find any other way to make
@@ -64,13 +62,8 @@ zark_SOURCES = variables.def\
 # Because of the explicit make rules I need this EXTRA_DIST to make sure the lex sources are
 # indluded in the dist. Since the lex output is included in the dist as well, they aren't actually
 # used, but make would otherwise error out because the dependency needs to be satisfied.
-EXTRA_DIST = cmdstring_lex.l keybindings_lex.l
+EXTRA_DIST = cmdstring_lex.l
 
-
-keybindings_yacc.c: keybindings_lex.c.inc
-
-keybindings_lex.c.inc: keybindings_lex.l
-	$(LEX) -okeybindings_lex.c.inc keybindings_lex.l
 
 cmdstring_yacc.c: cmdstring_lex.c.inc
 

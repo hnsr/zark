@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="zark"
 	ProjectGUID="{036E9135-763C-480B-BBAD-9901F990D2F6}"
 	RootNamespace="zark"
@@ -302,10 +302,6 @@
 			</File>
 			<File
 				RelativePath="..\src\input.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\keybindings_yacc.c"
 				>
 			</File>
 			<File
