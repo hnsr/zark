@@ -2,7 +2,6 @@
 #define __INPUT_H__
 
 #include <stdio.h>
-#include "command.h"
 
 // List of physical keys I support for keybindings. For now I'll just add all of those on my own
 // QWERTY keyboard, will have to investigate about all the possible keys of other keyboard types.
@@ -46,10 +45,12 @@ typedef struct ZKeyBinding
     ZKeyEvent keyevent;
     char *cmdstring;
 
+    // FIXME FIXME 
+#if 0
     // Parsed commands, cmdstring is kept around only for saving keybindings on exit.
     unsigned int numcommands;
     ZParsedCommand *parsedcmds;
-
+#endif
 } ZKeyBinding;
 
 extern ZKeyBinding *keybindings;

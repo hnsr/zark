@@ -25,7 +25,8 @@ void zPrintCurrentMVMatrix(void)
 // Print all keys, commands and keybindings.
 void zPrintInputStuff(unsigned int what)
 {
-    unsigned int i, j, k;
+    unsigned int i;
+                 // FIXME FIXME j, k;
 
     zDebug("");
 
@@ -95,7 +96,7 @@ void zPrintInputStuff(unsigned int what)
     if (what & Z_INPUT_KEYBINDINGS) {
 
         ZKeyBinding *kb;
-        ZParsedCommand *pcmd;
+        // FIXME FIXME ZParsedCommand *pcmd;
 
         zDebug("Listing all defined keybindings:");
         for (i = 0; i < numkeybindings; i++) {
@@ -103,7 +104,8 @@ void zPrintInputStuff(unsigned int what)
             kb = &(keybindings[i]);
 
             zDebug("  ZKeyBinding %d: %s", i, zKeyEventName(&kb->keyevent));
-
+// FIXME FIXME
+#if 0
             for (j = 0; j < kb->numcommands; j++) {
 
                 pcmd = &(kb->parsedcmds[j]);
@@ -120,7 +122,7 @@ void zPrintInputStuff(unsigned int what)
                     );
                 }
             }
-
+#endif
             zDebug("    cmdline: \"%s\"", kb->cmdstring);
             zDebug("");
         }
