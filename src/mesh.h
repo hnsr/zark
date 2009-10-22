@@ -96,32 +96,35 @@ typedef struct ZMesh
 {
     char name[Z_RESOURCE_NAME_SIZE];
 
-    int is_resident;            // Wether or not the vertex data has been uploaded to OpenGL.
+    int is_resident; // Wether or not the vertex data has been uploaded to OpenGL.
 
-    unsigned int flags;         // Data format flags.
+    unsigned int flags; // Data format flags.
 
-    unsigned int num_groups;    // Number of vertex groups.
+    unsigned int num_groups; // Number of vertex groups.
 
-    unsigned int num_vertices;  // Number of vertices in the vertex buffer and tangents in the
-                                // tangent buffer.
-    unsigned int num_indices;   // Number of indices in the index buffer.
+    // Number of vertiex (and optionally tangents) and indices in buffer.
+    unsigned int num_vertices;
+    unsigned int num_indices;
 
-    unsigned int vertices_size; // Element size of vertex buffer.
-    unsigned int indices_size;  // Element size of index buffer.
+    // Element size for vertex/index buffers.
+    unsigned int vertices_size;
+    unsigned int indices_size;
 
-    unsigned int elem_size;     // Size of each vertex in number of floats.
+    unsigned int elem_size; // Size of each vertex in number of floats.
 
-    GLuint vertex_vbo_name;     // Names of OpenGL VBOs. 0 means not loaded
+    // Names of OpenGL VBOs, 0 means they haven't been uploaded.
+    GLuint vertex_vbo_name;
     GLuint tangent_vbo_name;
     GLuint index_vbo_name;
 
-    float *vertices;            // Vertex array.
-    float *tangents;            // Tangent/bitangent array.
-    unsigned int *indices;      // Index array.
+    // Vertex/tangent/index buffers
+    float *vertices;
+    float *tangents;
+    unsigned int *indices;
 
-    ZMaterial *materials;       // A linked list of materials local to the mesh (i.e. those loaded
-                                // from a .mtl library for an .obj model). Groups may or may not
-                                // refer to these. Should be freed when the mesh is deleted.
+    // Linked list of materials local to the mesh (i.e. those loaded from a .mtl library for an .obj
+    // model). Groups may or may not refer to these. Should be freed when the mesh is deleted.
+    ZMaterial *materials;
 
     ZMeshGroup groups[Z_MESH_MAXGROUPS];
 
@@ -146,8 +149,8 @@ int zGrowMeshBuffers(ZMesh *mesh, int type);
 
 void zMeshInfo(ZMesh *mesh);
 
-void zMakeMeshNonResident(ZMesh *mesh, void *ignored); // Last param makes this directly callable by
-                                                       // zIterMeshes.
+void zMakeMeshNonResident(ZMesh *mesh, void *ignored);
+
 void zDeleteMesh(ZMesh *mesh);
 
 #endif

@@ -14,8 +14,7 @@
 #include "common.h"
 
 
-// Array with names and descriptions for each key, used for getting friendly names from keysymbols
-// and for looking up keysymbols from a string (for now just by linearly searching through it).
+// Names and descriptions for each key.
 struct
 {
     char *name;
@@ -28,14 +27,10 @@ struct
 };
 
 
-// Global array for all the defined keybindings.
+// Dynamically allocated array containing all the currently defined keybindings.
 ZKeyBinding *keybindings;
-
-// Real element size of keybindings array, used for dynamically growing it.
-size_t keybindings_size;
-
-// Number of keybindings actually added to global array.
-unsigned int numkeybindings;
+size_t keybindings_size;     // Real size of array.
+unsigned int numkeybindings; // Number of defined keybindings.
 
 
 // The default (and for now only) controller.
@@ -109,7 +104,7 @@ static int zGrowTextBuffer(ZTextBuffer *textbuf, unsigned int bytes)
 // update a ZTextBuffer.
 void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
 {
-    // If str was given we just need to insert text at curspor position.
+    // If str was given I just need to insert text at curspor position.
     if (str) {
 
         unsigned int len = strlen(str);
@@ -119,22 +114,16 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
             // Ignore control characters, I'm assuming these are never part of multi-character
             // strings.
             if ( (unsigned char) *str < 0x20 || *str == 0x7f ) {
-                //zDebug("Ignoring ASCII control character: %#x", (unsigned int) *str);
+
                 if (len > 1) zWarning("%s: Ignored control character that was part of"
                     " multicharacter string", __func__);
                 return;
             }
 
             // Normal string, insert/append (in)to buffer.
-            //zDebug("Would append %s to text buffer.", str);
-
-            // Make sure str fits.
             if (zGrowTextBuffer(textbuf, len)) {
 
-                // Copy stuff after cursorpos to shadow buffer, insert stuff at cursorpos, copy
-                // string in shadow buffer back.
-
-                // Copy stuff after cursorpos to temp buffer.
+                // Copy stuff after cursorpos to shadow buffer.
                 strcpy(textbuf->buf_shadow, (textbuf->buf)+textbuf->cursor_bytes);
 
                 // Append str at current cursor pos., update cursorpos.
@@ -145,14 +134,12 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str)
                 strcat(textbuf->buf, textbuf->buf_shadow);
                 textbuf->bytes += len;
 
-                //zDebug("bytes=%d, cursor_bytes=%d", textbuf->bytes, textbuf->cursor_bytes);
-
             } else {
                 zWarning("Failed to resize text buffer");
             }
         }
 
-    // Else we handle some special keys for deletion and cursor movement. It's safe to skip all
+    // Else I handle some special keys for deletion and cursor movement. It's safe to skip all
     // that if the textbuffer is empty.
     } else if (textbuf->bytes) {
 
@@ -252,10 +239,9 @@ ZKeyBinding *zLookupKeyBinding(const ZKeyEvent *zkev)
 {
     unsigned int i;
 
-    // Loop over all defined keybindings until we find a match with the given keyevent.
+    // Loop over all defined keybindings until there's a match with the given keyevent.
     for (i = 0; i < numkeybindings; i++) {
 
-        // Test if keyevents match.
         if ( zkev->key      == keybindings[i].keyevent.key &&
              zkev->keystate == keybindings[i].keyevent.keystate &&
              zkev->modmask  == keybindings[i].keyevent.modmask ) {
@@ -330,11 +316,13 @@ char *zKeyEventName(ZKeyEvent *kev)
 }
 
 
+
 // Linked list of currently pressed keys (see zDispatchKeyEvent).
+// XXX: Maybe it's better to just have a fixed size array or some kind of pooling to prevent a
+// lot of allocating/freeing of memory.
 static ZKeyEvent *pressed_keys;
 
-
-// Release currently pressed keys, and (unless skip_keybinds is set) run associated keybindings.
+// Release currently pressed keys, and, if skip_keybinds is not set, run associated keybindings.
 void zReleaseKeys(int skip_keybinds)
 {
     ZKeyEvent *tmp, *cur = pressed_keys;
@@ -366,7 +354,7 @@ static void zAddKeyPressToList(const ZKeyEvent *zkev)
     ZKeyEvent *tmp, *new;
 
     // Scan through list and see if there's a match for given key event. If a match is found,
-    // nothing needs to be added and we return. Since this should ideally not happen I'll print a
+    // nothing needs to be added and I return. Since this should ideally not happen I'll print a
     // warning as well. I might be able to get away with skipping this and linking it in directly,
     // not sure..
     tmp = pressed_keys;
@@ -403,7 +391,7 @@ void zDispatchKeyEvent(const ZKeyEvent *zkev)
 
     // If its a key press, just add to pressed key list and run any bound commands. If it's a key
     // release, see if it's in the pressed key list and if so remove it and run bound commands.
-    if ( zkev->keystate == Z_KEY_STATE_PRESS) {
+    if ( zkev->keystate == Z_KEY_STATE_PRESS ) {
 
         zAddKeyPressToList(zkev);
 
@@ -453,7 +441,7 @@ static int zGrowKeyBindingsArray(void)
     // Array should always be big enough to hold kbcount elements before I realloc.
     assert(keybindings_size >= numkeybindings);
 
-    // Check if we need to either initially alloc the array, or grow it.
+    // Check if I need to either initially alloc the array.
     if (keybindings_size == 0) {
 
         keybindings = malloc( sizeof(ZKeyBinding) * 50);
@@ -465,12 +453,10 @@ static int zGrowKeyBindingsArray(void)
         }
         keybindings_size = 50;
 
-    // If the array is just big enough to hold current kbcount elements, it needs to grow to add
-    // this one.
+    // Else, if the array is just big enough to hold current kbcount elements, it needs to grow to
+    // add this one.
     } else if ( keybindings_size == numkeybindings ) {
 
-        // Store new pointer in a temporary var so we can roll back if realloc fails and returns
-        // NULL, instead of overwriting *kbs and losing the previous pointer.
         ZKeyBinding *tmp_kbs;
         tmp_kbs = realloc(keybindings, sizeof(ZKeyBinding) * (keybindings_size+50));
         if (tmp_kbs == NULL) {

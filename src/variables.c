@@ -11,7 +11,7 @@
 
 #include "common.h"
 
-// Generate definitions.
+// Generate variable definitions.
 #define MAKE_DEFINITIONS
 #include "variables.def"
 #undef MAKE_DEFINITIONS
@@ -27,7 +27,7 @@ ZVariable variables[] = {
 
 
 
-// Return (statically allocated) string containing name of given type.
+// Return statically allocated string containing name of given variable type.
 const char *zVariableType(ZVariableType type)
 {
     switch (type) {
@@ -86,7 +86,7 @@ int zVarIsDefault(ZVariable *var)
 
 
 
-// Return pointer to variable with name given, or NULL if none found.
+// Return pointer to variable with given name, or NULL if none found.
 ZVariable *zLookupVariable(const char *name)
 {
     int i;
@@ -187,7 +187,7 @@ static int zLuaSet(lua_State *L)
 
 // Load variables from file. Returns 0 if there were no errors, Z_PARSE_SYNTAXERROR if there was a
 // syntax error, Z_PARSE_FILEERROR if the file didn't exist, or Z_PARSE_ERROR for all other errors.
-// See zGetPath for flags and prefix.
+// See zGetPath for prefix and flags.
 static int zParseVariables(const char *filename, const char *prefix, int flags)
 {
     lua_State *L;
@@ -203,7 +203,7 @@ static int zParseVariables(const char *filename, const char *prefix, int flags)
 
     // TODO: Not sure if it's right to put this zPrint here, but the caller won't know the full
     // path (and full paths is what I want to print). I should probably just have the caller call
-    // zGetPath and make zLoadVariables work with a full path..
+    // zGetPath and make zParseVariables work with a full path..
     zPrint("Loading variables from \"%s\".\n", path);
 
     // Create state, expose base library and zLuaSet.
@@ -214,9 +214,9 @@ static int zParseVariables(const char *filename, const char *prefix, int flags)
 
     // Some glue so user can just set globals instead of having to call set() itself, this also
     // creates an empty environment.
-    zLua(L, "new_env = {}");
-    zLua(L, "setmetatable(new_env, { __newindex = function (t,k,v) set(k,v) end })");
-    zLua(L, "setfenv(0, new_env)");
+    zLua(L, "new_env = {}\n"
+            "setmetatable(new_env, { __newindex = function (t,k,v) set(k,v) end })\n"
+            "setfenv(0, new_env)\n");
 
     if (luaL_dofile(L, path)) {
         zWarning("Failed to parse variables: %s", lua_tostring(L, -1));
@@ -230,14 +230,12 @@ static int zParseVariables(const char *filename, const char *prefix, int flags)
 
 
 
-// If there is a syntax error when loading the user configuration (i.e. because the user tweaked it
-// and made a typo), then (since not all the user's settings are loaded,) they would be lost when I
-// write the config file back on exit. Therefore I set a flag indicating if the user config had
-// syntax error, and I check for that in zDumpVariables.
+// A flag that helps me prevent data loss when a user makes a typo in his config, and not everything
+// is loaded. In that case I just print a warning and skip saving the incomplete configuration.
 static int uservars_badsyntax = 0;
 
-// Load previously saved variables for user, or the default one (from the system data directory) if
-// nothing has been saved yet.
+// Load previously saved variables from user config, or the default config (from the system data
+// directory) if there was an error.
 void zLoadConfig(void)
 {
     int err;
@@ -248,7 +246,13 @@ void zLoadConfig(void)
         // See if there was a syntax error.
         uservars_badsyntax = err == Z_PARSE_SYNTAXERROR;
 
-        zWarning("Failed to load user config, falling back to default config.");
+        zPrint("Falling back to default config.\n");
+
+        // TODO: For the sake of not ending up with a partial user config, with bits overriden by
+        // the default config, I could revert all variables to their defaults at this point (before
+        // loading the default config). Even better: If I prevent zSaveConfig from doing anything if
+        // all veriables are at their defaults, I can probably do away with the whole
+        // uservars_badsyntax check.
 
         // Now try loading it from system data dir to get some sane defaults.
         if ( (err = zParseVariables(Z_FILE_CONFIG, NULL, 0)) )
@@ -258,7 +262,7 @@ void zLoadConfig(void)
 
 
 
-// Dump variables with non-default values to file. File will be saved relative to DIR_USERDATA.
+// Save variables with non-default values to user config.
 void zSaveConfig(void)
 {
     const char *path;

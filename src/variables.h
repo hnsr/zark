@@ -6,6 +6,7 @@
 // probably change this to use dynamic memory but I won't bother until I need to
 #define Z_VAR_STRING_SIZE 256
 
+
 typedef enum ZVariableType
 {
     Z_VAR_TYPE_INVALID,
@@ -18,12 +19,14 @@ typedef enum ZVariableType
 } ZVariableType;
 
 
+// ZVariable - defines some properties (type, defaults, limits) for an internal variable exposed to
+// the user.
 typedef struct ZVariable
 {
-    ZVariableType type;      // Type of this variable.
-    void *varptr;            // Pointer to variable storage.
-    const char *name;        // Short name that identifies the variable.
-    const char *description; // Description of the variable's purpose.
+    ZVariableType type;
+    void *varptr; // Pointer to actual variable storage
+    const char *name;
+    const char *description;
 
     // The default values and limits for this variable. I would use unions here, but it seems I can
     // only initialize unions at run-time (C99 allows union initializers, but MSVC won't), which I
@@ -64,17 +67,17 @@ void zSaveConfig(void);
 
 
 // Set variable to val, clamped to variable's min/max.
-#define zVarSetFloat(var,val) {\
+#define zVarSetFloat(var,val) do {\
     float ff = (val); /* in case val has side-effects */\
      *((float *)(var)->varptr) = ( ff > (var)->float_max ? (var)->float_max :\
                                  ( ff < (var)->float_min ? (var)->float_min : ff ));\
-}
+} while (0)
 
-#define zVarSetInt(var,val) {\
+#define zVarSetInt(var,val) do {\
     int ii = (val);\
      *((int *)(var)->varptr) = ( ii > (var)->int_max ? (var)->int_max :\
                                ( ii < (var)->int_min ? (var)->int_min : ii ));\
-}
+} while(0)
 
 #endif
 

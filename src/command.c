@@ -10,6 +10,7 @@
 
 #include "common.h"
 
+
 // ZCmdArgSymbol - special symbols that are looked up when parsing string arguments on the
 // commandline. Only used in command-related functions so no need to put this in the header.
 typedef enum ZCmdArgSymbol

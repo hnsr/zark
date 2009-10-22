@@ -453,10 +453,8 @@ char *zGetStringFromFile(const char *filename)
 
 
 // Return hash for given string and table size. Current hash function may not be ideal but seems
-// decent enough for my purposes.
-// Some links if I ever want to improve this:
-// http://burtleburtle.net/bob/hash/doobs.html
-// http://www.azillionmonkeys.com/qed/hash.html
+// decent enough for my purposes. Some links if I ever want to improve this:
+// http://burtleburtle.net/bob/hash/doobs.html / http://www.azillionmonkeys.com/qed/hash.html
 unsigned int zHashString(const char *str, int tablesize)
 {
     unsigned int tmp = 0, hash = 0;
@@ -514,7 +512,7 @@ char *zUTF8FindPrevChar(const char *src, const char *pos)
 }
 
 
-
+// Return pointer to the next character after pos.
 char *zUTF8FindNextChar(const char *pos)
 {
     while (*pos != '\0') {
@@ -529,6 +527,8 @@ char *zUTF8FindNextChar(const char *pos)
     return (char *) pos;
 }
 
+
+
 // Time elapsed in seconds.
 float time_elapsed;
 
@@ -541,36 +541,29 @@ float zFrameTime(void)
     static float next_fps_print, last_fps_time, dtime;
     static unsigned int last_fps_frame_count, dframes;
 
-    // Don't risk sleeping too long.
-    #define FPS_SLEEP_MARGIN 1.0f
+    #define FPS_SLEEP_MARGIN 1.0f // Don't sleep for too short periods, not sure if it matters..
 
-    // To limit the FPS, we loop until the time that has passed since we last started drawing a
-    // frame (frame_time) is equal to or larger than the 'ideal' time of each frame (1000/r_maxfps).
-    // If we haven't reached ideal frame time yet, see if there's enough time left to throw in a
-    // sleep call to limit CPU load.
+    // Don't maintain framerate if r_maxfps is 0
     if (r_maxfps > 0.0f) {
 
-        // Recalc ideal frame time. A bit of a waste to do it like this but since it can be changed
-        // at any time I will have to (unless I ever decide to implement setter functions for vars).
-        ideal_frame_time = 1000.0f/r_maxfps;
+        ideal_frame_time = 1000.0f/r_maxfps; // FIXME: Use reciprocal? Would need to check if
+                                             // r_maxfps changes and recalc it..
 
-        // Loop infinitely until we reach the ideal frame time.
+        // Wait until ideal frame time is reached.
         while (1) {
 
             this_time = zGetTimeMS();
             frame_time = this_time - last_time;
 
-            //zDebug("this_time %.2f, frame_time, %.2f", this_time, frame_time);
-
             // See if we are at or over the ideal frame time. The amount of time we over- or under-
             // shot last frame is taken into account (error) to balance out the framerate.
             if ((frame_time + error) >= ideal_frame_time) {
                 error += frame_time - ideal_frame_time;
-                if (error > 5.0f) error = 5.0f; // Clamp error so we don't get crazy high values if
-                                                // ideal framereate can't be attained.
-                //zDebug("error %.3f  ideal_frame_time %.3f  frame_time %.3f",error,ideal_frame_time,
-                //    frame_time);
+
+                // Clamp error so it can't reach crazy values if framerate can't be maintained.
+                if (error > 5.0f) error = 5.0f;
                 break;
+
             } else if ( (sleep_time = ideal_frame_time - frame_time) > FPS_SLEEP_MARGIN ) {
                 zSleep(sleep_time-FPS_SLEEP_MARGIN);
             }
@@ -583,18 +576,15 @@ float zFrameTime(void)
     last_time = this_time;
     time_elapsed = this_time*0.001f;
 
-    // Keep track of FPS, even if printfps is 0...
+    // Keep track of FPS, even if printfps is 0... FIXME: this can probably be improved
     if (this_time >= next_fps_print) {
 
         dframes = frame_count - last_fps_frame_count;
         dtime = this_time - last_fps_time;
 
-        // Make sure I only print if enabled, and not if we're doing text input or just started
-        // running..
         if (printfps &&  next_fps_print > 0  && !text_input) {
             zPrint("%d frames rendered in %.2f ms (%.2f fps).\n", dframes, dtime,
                 (((float) dframes*1000) / dtime));
-            //zDebug("time_elapsed = %.3f", time_elapsed);
         }
 
         next_fps_print += printfpstime;

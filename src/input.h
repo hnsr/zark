@@ -31,26 +31,24 @@ typedef enum ZKey
 // ZKeyEvent - everything that needs to be known for a key event.
 typedef struct ZKeyEvent
 {
-    enum ZKey key;          // The physical key that was pressed.
-    unsigned int keystate;  // Was it a press or release?
-    unsigned int modmask;   // Which modifier keys were down?
+    enum ZKey key;
+    unsigned int keystate;  // FIXME: combine keystate and modmask?
+    unsigned int modmask;
     struct ZKeyEvent *next; // Only used for list of currently down keys.
 
 } ZKeyEvent;
 
 
 
-// ZKeyBinding - represents the binding between a key with one or more commands. Some conditions can
-// be set on wether or not it is a press or release event (keystate) and which (if any) of the
-// modifier keys were down (modstate).
+// ZKeyBinding - represents the binding between a key event and a command string.
 typedef struct ZKeyBinding
 {
-    ZKeyEvent keyevent;         // Key event for this binding.
-    char *cmdstring;            // The unprocessed command string for this keybinding. Can be used
-                                // to dump keybindings back to a file without loss of any
-                                // information (from parsing).
-    unsigned int numcommands;   // Number of commands this key is bound with.
-    ZParsedCommand *parsedcmds; // Array of parsed commands
+    ZKeyEvent keyevent;
+    char *cmdstring;
+
+    // Parsed commands, cmdstring is kept around only for saving keybindings on exit.
+    unsigned int numcommands;
+    ZParsedCommand *parsedcmds;
 
 } ZKeyBinding;
 
@@ -89,7 +87,8 @@ extern ZController controller;
 
 #define Z_TEXTBUFFER_SIZE 1024
 
-// ZTextBuffer - Keeps track of textual input given by user, cursor state etc.
+// ZTextBuffer - Keeps track of text input from by user and cursor state. Every text input area
+// (console, GUI widget) will be backed by one of these.
 typedef struct ZTextBuffer
 {
     size_t  cursor_bytes; // Cursor offset in bytes.
@@ -104,6 +103,7 @@ typedef struct ZTextBuffer
 typedef void (*ZTextInputCallback)(ZKeyEvent *zkev, char *str);
 
 extern int text_input;
+
 extern ZTextInputCallback text_input_cb;
 
 

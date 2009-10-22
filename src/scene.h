@@ -26,7 +26,6 @@ typedef struct ZPosable
     float rot_y;
     float rot_z;
 
-    // What kind of object we are posing.
     unsigned int type;
 
     // Pointer to the object being posed

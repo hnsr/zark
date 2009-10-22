@@ -645,7 +645,8 @@ void zMeshInfo(ZMesh *mesh)
 
 
 
-// Destroy VBO for mesh, and make materials local to mesh non-resident as well.
+// Destroy VBO for mesh, and make materials local to mesh non-resident as well. Last parameter is
+// ignored and makes it possible to pass this function directly to zIterMeshes.
 void zMakeMeshNonResident(ZMesh *mesh, void *ignored)
 {
     ZMaterial *curmat = mesh->materials;
@@ -656,7 +657,7 @@ void zMakeMeshNonResident(ZMesh *mesh, void *ignored)
     glDeleteBuffersARB(1, &mesh->vertex_vbo_name);
     mesh->vertex_vbo_name = 0;
 
-    // It's possible that we built a tangent array but for whatever reason never uploaded it to
+    // It's possible that I built a tangent array but for whatever reason never uploaded it to
     // OpenGL, so I don't check data format flags.
     if (mesh->tangent_vbo_name) {
         glDeleteBuffersARB(1, &mesh->tangent_vbo_name);
