@@ -40,6 +40,8 @@ void zPrintInputStuff(unsigned int what)
     }
 
 
+// FIXME FIXME
+#if 0
     // Dump command list.
     if (what & Z_INPUT_COMMANDS) {
 
@@ -55,6 +57,7 @@ void zPrintInputStuff(unsigned int what)
         }
         zDebug("");
     }
+#endif
 
     // Dump variables list.
     if (what & Z_INPUT_VARIABLES) {

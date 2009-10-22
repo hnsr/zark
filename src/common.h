@@ -115,7 +115,7 @@
 #include "textrender.h"
 #include "os.h"
 #include "variables.h"
-#include "command.h"
+// FIXME FIXME #include "command.h"
 #include "console.h"
 #include "script.h"
 

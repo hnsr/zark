@@ -69,7 +69,7 @@ int zMain(int argc, char** argv)
     zLoadMaterials();
     zLoadConfig();
     zLoadKeyBindings();
-    zLoadCommands(Z_FILE_STARTUP);
+    // FIXME FIXME zLoadCommands(Z_FILE_STARTUP);
 
     zOpenWindow(r_winwidth, r_winheight);
 

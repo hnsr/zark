@@ -28,7 +28,7 @@ static void zTextConsoleInputHandler(ZKeyEvent *zkev, char *str)
         prevcmd = strdup(cmdbuf.buf);
 
         // Execute cmdstring in text buffer and reset.
-        zExecCmdString(cmdbuf.buf);
+        // FIXME FIXME zExecCmdString(cmdbuf.buf);
         zResetTextBuffer(&cmdbuf);
 
         // Reprint prompt (if we didn't just exit text input mode).

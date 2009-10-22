@@ -334,9 +334,11 @@ void zReleaseKeys(int skip_keybinds)
         if (!skip_keybinds) {
             cur->keystate = Z_KEY_STATE_RELEASE;
             if ( (kb = zLookupKeyBinding(cur)) != NULL ) {
-
+// FIXME FIXME
+#if 0
                 if (kb->numcommands > 0 )
                     zExecParsedCmds(kb->parsedcmds, kb->numcommands);
+#endif
             }
         }
         tmp = cur->next;
@@ -396,8 +398,11 @@ void zDispatchKeyEvent(const ZKeyEvent *zkev)
         zAddKeyPressToList(zkev);
 
         if ( (kb = zLookupKeyBinding(zkev)) != NULL ) {
+// FIXME FIXME
+#if 0
             if (kb->numcommands > 0 )
                 zExecParsedCmds(kb->parsedcmds, kb->numcommands);
+#endif
         }
     } else {
 
@@ -412,9 +417,11 @@ void zDispatchKeyEvent(const ZKeyEvent *zkev)
                 // Run keybinding for the key release.
                 cur->keystate = Z_KEY_STATE_RELEASE;
                 if ( (kb = zLookupKeyBinding(cur)) != NULL ) {
-
+// FIXME FIXME
+#if 0
                     if (kb->numcommands > 0 )
                         zExecParsedCmds(kb->parsedcmds, kb->numcommands);
+#endif
                 }
 
                 // Unlink.
@@ -478,6 +485,8 @@ static int zGrowKeyBindingsArray(void)
 // either freed (when parsing it fails) or attached to the keybinding.
 int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring)
 {
+    // FIXME FIXME
+#if 0
     ZKeyBinding *kb;
     ZParsedCommand *parsedcmds;
     int numcmds;
@@ -519,7 +528,8 @@ int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring)
     kb->cmdstring   = cmdstring;
     kb->numcommands = numcmds;
     kb->parsedcmds  = parsedcmds;
-
+#endif
+    free(cmdstring);
     return TRUE;
 }
 
