@@ -101,7 +101,7 @@
 // DIR_USERDATA, and non-default variables are dumped to FILE_CONFIG under DIR_USERDATA.
 #define Z_FILE_CONFIG      "config.zvar"
 #define Z_FILE_KEYBINDINGS "keybindings.zkbd"
-#define Z_FILE_STARTUP     "startup.zcmd"
+#define Z_FILE_STARTUP     "startup.lua"
 
 
 #include "renderer.h"
