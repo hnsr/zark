@@ -185,9 +185,9 @@ static int zLuaSet(lua_State *L)
 
 
 
-// Load variables from file. Returns 0 if there were no errors, Z_PARSE_SYNTAXERROR if there was a
-// syntax error, Z_PARSE_FILEERROR if the file didn't exist, or Z_PARSE_ERROR for all other errors.
-// See zGetPath for prefix and flags.
+// Load variables from file. Returns 0 if there were no errors, Z_ERROR_SYNTAX if there was a syntax
+// error, Z_ERROR_FILE if the file didn't exist, or Z_ERROR for all other errors. Prefix and flags
+// are passed on to zGetPath.
 static int zParseVariables(const char *filename, const char *prefix, int flags)
 {
     lua_State *L;
@@ -195,11 +195,11 @@ static int zParseVariables(const char *filename, const char *prefix, int flags)
 
     if (!path) {
         zWarning("%s: Failed to construct path for \"%s\".", __func__, filename);
-        return Z_PARSE_ERROR;
+        return Z_ERROR;
     }
 
     if (zPathExists(path) != Z_EXISTS_REGULAR)
-        return Z_PARSE_FILEERROR;
+        return Z_ERROR_FILE;
 
     // TODO: Not sure if it's right to put this zPrint here, but the caller won't know the full
     // path (and full paths is what I want to print). I should probably just have the caller call
@@ -221,7 +221,7 @@ static int zParseVariables(const char *filename, const char *prefix, int flags)
     if (luaL_dofile(L, path)) {
         zWarning("Failed to parse variables: %s", lua_tostring(L, -1));
         lua_close(L);
-        return Z_PARSE_SYNTAXERROR;
+        return Z_ERROR_SYNTAX;
     }
 
     lua_close(L);
@@ -244,7 +244,7 @@ void zLoadConfig(void)
     if ( (err = zParseVariables(Z_FILE_CONFIG, NULL, Z_FILE_FORCEUSER)) ) {
 
         // See if there was a syntax error.
-        uservars_badsyntax = err == Z_PARSE_SYNTAXERROR;
+        uservars_badsyntax = err == Z_ERROR_SYNTAX;
 
         zPrint("Falling back to default config.\n");
 
@@ -270,8 +270,14 @@ void zSaveConfig(void)
     ZVariable *var;
     float *vec;
 
+
     if (uservars_badsyntax) {
         zWarning("Not writing config, check \"%s\" for syntax errors.", Z_FILE_CONFIG);
+        return;
+    }
+
+    if (fs_nosave) {
+        zPrint("Not writing config (fs_nosave).\n");
         return;
     }
 

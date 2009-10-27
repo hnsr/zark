@@ -78,10 +78,12 @@
 #define MIN(x, y) ((x)<(y) ? (x):(y))
 #endif
 
-// Error codes for functions that parse keybindings/vars etc.
-#define Z_PARSE_ERROR        1
-#define Z_PARSE_FILEERROR    2
-#define Z_PARSE_SYNTAXERROR  3
+
+// Generic error codes.
+#define Z_ERROR         1 // Unspecified error.
+#define Z_ERROR_FILE    2 // File/dir access error.
+#define Z_ERROR_SYNTAX  3 // Bad syntax while parsing.. something.
+#define Z_ERROR_LUA     4 // Failed to execute or compile lua code.
 
 
 // Size of array for storing names of recources (meshes, textures, materials etc.)
@@ -111,13 +113,15 @@
 #include "camera.h"
 #include "main.h"
 #include "util.h"
+
+#include "zlua.h"
 #include "input.h"
+
 #include "textrender.h"
 #include "os.h"
 #include "variables.h"
-// FIXME FIXME #include "command.h"
 #include "console.h"
-#include "script.h"
+#include "impulse.h"
 
 
 #endif

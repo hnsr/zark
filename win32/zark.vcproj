@@ -189,10 +189,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\command.h"
-				>
-			</File>
-			<File
 				RelativePath="..\src\common.h"
 				>
 			</File>
@@ -206,6 +202,10 @@
 			</File>
 			<File
 				RelativePath="..\src\image.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\impulse.h"
 				>
 			</File>
 			<File
@@ -241,10 +241,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\script.h"
-				>
-			</File>
-			<File
 				RelativePath="..\src\shader.h"
 				>
 			</File>
@@ -262,6 +258,10 @@
 			</File>
 			<File
 				RelativePath="..\src\variables.h"
+				>
+			</File>
+			<File
+				RelativePath="..\src\zlua.h"
 				>
 			</File>
 			<File
@@ -285,19 +285,15 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\cmdstring_yacc.c"
-				>
-			</File>
-			<File
-				RelativePath="..\src\command.c"
-				>
-			</File>
-			<File
 				RelativePath="..\src\console.c"
 				>
 			</File>
 			<File
 				RelativePath="..\src\image.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\impulse.c"
 				>
 			</File>
 			<File
@@ -337,10 +333,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\script.c"
-				>
-			</File>
-			<File
 				RelativePath="..\src\shader.c"
 				>
 			</File>
@@ -354,6 +346,14 @@
 			</File>
 			<File
 				RelativePath="..\src\variables.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\zlua.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\zlua_console.c"
 				>
 			</File>
 			<File

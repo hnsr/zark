@@ -22,115 +22,6 @@ void zPrintCurrentMVMatrix(void)
 }
 
 
-// Print all keys, commands and keybindings.
-void zPrintInputStuff(unsigned int what)
-{
-    unsigned int i;
-                 // FIXME FIXME j, k;
-
-    zDebug("");
-
-    // Dump keys.
-    if (what & Z_INPUT_KEYS) {
-
-        zDebug("Listing all defined keys:");
-        for (i = 0; i < Z_NUM_KEYS; i++) {
-            zDebug("  ZKey %d: %s (%s)", i, zKeyName(i), zKeyDesc(i));
-        }
-        zDebug("");
-    }
-
-
-// FIXME FIXME
-#if 0
-    // Dump command list.
-    if (what & Z_INPUT_COMMANDS) {
-
-        zDebug("Listing all defined commands:");
-        for (i=0; commands[i].cmdfunc != NULL; i++) {
-
-            zDebug("  ZCommand %d: %s (%s)", i, commands[i].keyword, commands[i].description);
-
-            // Print argument descriptions.
-            for (j=0; j<commands[i].numargs; j++) {
-                zDebug("    arg %d: %s", j, commands[i].argdesc[j]);
-            }
-        }
-        zDebug("");
-    }
-#endif
-
-    // Dump variables list.
-    if (what & Z_INPUT_VARIABLES) {
-
-        zDebug("Listing all variables:");
-        for (i=0; variables[i].varptr != NULL; i++) {
-
-            zDebug("  ZVariable %d: %-16s (%7s) - %s", i, variables[i].name,
-                zVariableType(variables[i].type), variables[i].description);
-
-            // Print current/default value.
-            if (variables[i].type == Z_VAR_TYPE_INT) {
-
-                zDebug("    default value: %d", variables[i].int_default);
-                zDebug("    current value: %d", *((int *)variables[i].varptr));
-
-            } else if (variables[i].type == Z_VAR_TYPE_FLOAT) {
-
-                zDebug("    default value: %f", variables[i].float_default);
-                zDebug("    current value: %f", *((float *)variables[i].varptr));
-
-            } else if (variables[i].type == Z_VAR_TYPE_STRING) {
-
-                zDebug("    default value: %s", variables[i].str_default);
-                zDebug("    current value: %s", (char *)variables[i].varptr);
-
-            }
-            // TODO: handle float3/4
-            zDebug("");
-        }
-        zDebug("");
-    }
-
-    // Display all defined keybindings
-    if (what & Z_INPUT_KEYBINDINGS) {
-
-        ZKeyBinding *kb;
-        // FIXME FIXME ZParsedCommand *pcmd;
-
-        zDebug("Listing all defined keybindings:");
-        for (i = 0; i < numkeybindings; i++) {
-
-            kb = &(keybindings[i]);
-
-            zDebug("  ZKeyBinding %d: %s", i, zKeyEventName(&kb->keyevent));
-// FIXME FIXME
-#if 0
-            for (j = 0; j < kb->numcommands; j++) {
-
-                pcmd = &(kb->parsedcmds[j]);
-
-                zDebug("    bound to \"%s\" with %d args", pcmd->command->keyword, pcmd->numargs);
-
-                for (k = 0; k < pcmd->numargs; k++) {
-                    zDebug("      %d: %6.2f, %3d, \"%12s\", variable %s",
-                        k,
-                        pcmd->args[k].float_arg,
-                        pcmd->args[k].int_arg,
-                        pcmd->args[k].str_arg,
-                        pcmd->args[k].var_arg != NULL ?  pcmd->args[k].var_arg->name : "(none)"
-                    );
-                }
-            }
-#endif
-            zDebug("    cmdline: \"%s\"", kb->cmdstring);
-            zDebug("");
-        }
-        zDebug("");
-    }
-}
-
-
 // Simple wrapper for if I ever want to redirect this or do something else than just write to
 // stdout. Maybe this belongs in os*.c, so that I can for example redirect it to a manually opened
 // console using Win32 API calls.
@@ -203,7 +94,7 @@ void zDebug(char *format, ...)
 #endif
 
 
-const char *zGetFloat3String(float *f)
+const char *zGetFloat3String(const float *f)
 {
     static char str[32];
 
@@ -214,7 +105,7 @@ const char *zGetFloat3String(float *f)
     return str;
 }
 
-const char *zGetFloat4String(float *f)
+const char *zGetFloat4String(const float *f)
 {
     static char str[32];
 
@@ -429,7 +320,7 @@ FILE *zOpenFile(const char *filename, const char *prefix, const char **fullpath,
 // should free the string when it is done using it. Returns NULL on error.
 char *zGetStringFromFile(const char *filename)
 {
-#define READ_INC 8
+#define READ_INC 512
     FILE *file = fopen(filename, "rb");
     char *result = NULL, *tmp;
     size_t result_size = 0, bytes_read = 0;

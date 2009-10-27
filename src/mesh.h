@@ -139,7 +139,7 @@ void zMeshDeinit(void);
 
 void zBuildTangentArray(ZMesh *mesh, int bitangent);
 
-ZMesh *zLookupMesh(char *name);
+ZMesh *zLookupMesh(const char *name);
 
 void zIterMeshes(void (*iter)(ZMesh *, void *), void *data);
 

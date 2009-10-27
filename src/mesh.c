@@ -206,13 +206,13 @@ ZMesh *zLoadMeshObj(const char *filename, unsigned int load_flags);
 ZMesh *zLoadMeshPly(const char *filename, unsigned int load_flags);
 
 // Load mesh.
-static ZMesh *zLoadMesh(char *name, unsigned int load_flags)
+static ZMesh *zLoadMesh(const char *name, unsigned int load_flags)
 {
     ZMesh *mesh;
     char *ext = zGetFileExtension(name);
     const char *realpath = zGetPath(name, NULL, Z_FILE_REWRITE_DIRSEP | Z_FILE_TRYUSER);
 
-    if (printdiskload) zDebug("Loading mesh \"%s\" from disk.", name);
+    if (fs_printdiskload) zDebug("Loading mesh \"%s\" from disk.", name);
 
     if (strlen(name) >= Z_RESOURCE_NAME_SIZE) {
         zError("Mesh name \"%s\" exceeds RESOURCE_NAME_SIZE, not loading.", name);
@@ -273,7 +273,7 @@ static ZMesh *zLoadMesh(char *name, unsigned int load_flags)
 
 
 // Lookup mesh with name in hash table.
-ZMesh *zLookupMesh(char *name)
+ZMesh *zLookupMesh(const char *name)
 {
     unsigned int i;
     ZMesh *cur;

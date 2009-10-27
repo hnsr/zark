@@ -14,8 +14,6 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 dnl Check for programs, headers, libs.. ------------------------------------------------------------
 
 AC_PROG_CC
-AC_PROG_LEX
-AC_PROG_YACC
 AC_C_BIGENDIAN
 
 dnl Attempt to enable C99 mode
@@ -103,5 +101,4 @@ echo "Using LDFLAGS:     $LDFLAGS"
 echo "Using CPPFLAGS:    $CPPFLAGS"
 echo "Using LIBS:        $LIBS"
 echo "Using CC:          $CC"
-echo "Using YACC:        $YACC"
 

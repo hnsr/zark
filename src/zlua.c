@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <lua.h>
@@ -5,6 +6,137 @@
 #include <lualib.h>
 
 #include "common.h"
+
+
+// The console VM is used for running simple commands that are typed at the console or bound to
+// keys.
+static lua_State *console_vm;
+
+void zInitConsoleVM(lua_State *L); // Defined in zlua_console.c
+
+
+// Initialize lua stuff, VM states etc.
+void zLuaInit(void)
+{
+    console_vm = luaL_newstate();
+    zInitConsoleVM(console_vm);
+}
+
+
+// Close VMs.
+void zLuaDeinit(void)
+{
+    lua_close(console_vm);
+}
+
+
+
+// Compiles a lua string and initializes 'code' so it can be executed later with zLuaRunCode.
+// Returns TRUE on success or FALSE when there was an error compiling the lua string. On error,
+// attempting to run the resulting code struct will simply do nothing.
+int zLuaCompileCode(unsigned int vm, ZLuaCode *code, const char *lua)
+{
+    int err, ref;
+
+    code->vm = NULL;
+    code->ref = LUA_NOREF;
+
+    assert(lua);
+
+    if (vm == Z_VM_CONSOLE)
+        code->vm = console_vm;
+    else
+        assert(0 && "Invalid vm");
+
+    // Attempt to pre-compile lua.
+    if ( (err = luaL_loadstring(code->vm, lua)) ) {
+        //zWarning("Failed to pre-compile code: %s", lua_tostring(code->vm, -1));
+        return FALSE;
+        lua_pop(code->vm, 1);
+    } else {
+        // Store compiled chunk in registry, and store a ref in code->ref.
+        ref = luaL_ref(code->vm, LUA_REGISTRYINDEX);
+        assert(ref != LUA_REFNIL && ref != LUA_NOREF);
+        code->ref = ref;
+    }
+
+    return TRUE;
+}
+
+
+
+// Execute the ZLuaCode object (either from scratch with code->lua if not compiled already, or else
+// using code->ref). If there is an error in the Lua code a warning will be printed. For other
+// error no warnings are printed (zLuaInitCode will have warned about those already).
+void zLuaRunCode(ZLuaCode *code)
+{
+    int err;
+
+    assert(code->vm);
+
+    if (code->ref != LUA_NOREF) {
+
+        lua_rawgeti(code->vm, LUA_REGISTRYINDEX, code->ref);
+
+        if (!lua_isfunction(code->vm, -1)) {
+            zWarning("%s: Value for code->ref is not a function.", __func__);
+            lua_pop(code->vm, 1);
+        } else {
+            if ( (err = lua_pcall(code->vm, 0, 0, 0)) ) {
+                zWarning("Failed to run lua: %s", lua_tostring(code->vm, -1));
+                lua_pop(code->vm, 1);
+            }
+        }
+    }
+}
+
+
+
+// Deletes the compiled lua chunk.
+void zLuaDeleteCode(ZLuaCode *code)
+{
+    luaL_unref(code->vm, LUA_REGISTRYINDEX, code->ref);
+    code->vm = NULL;
+    code->ref = LUA_NOREF;
+}
+
+
+
+// Run a snippet of lua on the fly in vm. Prints a warning if there were any errors running the
+// code.
+void zLuaRunString(unsigned int vm, const char *code)
+{
+    if (vm == Z_VM_CONSOLE) {
+        if (luaL_dostring(console_vm, code)) {
+            zWarning("Failed to run lua: %s", lua_tostring(console_vm, -1));
+            lua_pop(console_vm, 1);
+        }
+    } else {
+        assert(0 && "Invalid vm");
+    }
+}
+
+
+// Run a lua script. Prints a warning if there were any errors running the code.
+void zLuaRunFile(unsigned int vm, const char *filename)
+{
+    const char *path = zGetPath(filename, NULL, Z_FILE_TRYUSER);
+
+    if (!path) {
+        zError("%s: Failed to construct path for \"%s\".", __func__, filename);
+        return;
+    }
+
+    if (vm == Z_VM_CONSOLE) {
+        if (luaL_dofile(console_vm, path)) {
+            zWarning("Failed to run lua: %s", lua_tostring(console_vm, -1));
+            lua_pop(console_vm, 1);
+        }
+    } else {
+        assert(0 && "Invalid vm");
+    }
+}
+
 
 #if 0
 // Helper function for C functions exported to Lua, that prints a warning message that includes
@@ -29,21 +161,8 @@ void zLuaWarning(lua_State *L, int level, const char *msg, ...)
 #endif
 
 
-// The zLuaGetData* functions are intended to make parsing of data-description files easier. Data
-// entry is done by calling functions from lua with a single table as parameter. I.e.:
-//
-//   foo {
-//     name         = "foobar",
-//     some_number  = 42,
-//     a_color      = { 1, 1, 1, 0.5 },
-//     options      = { OPTION_A, OPTION_B }
-//   }
-//
-// Property values can be simple strings, tuples for colors (passed in as tables), flags (tables
-// where each member needs to be ORed), etc. These functions make getting these values less tedious.
-// They all assume the table passed to the 'data entry' function is at the top of the stack, and
-// return 1 when a value was succesfully read, or 0 on failure.
 
+// The zLuaGetData* functions are for easily getting values from a table (at the top of the stack).
 
 // Get a string from data table. Bufsize is the size of the buffer pointed to by dest, which is
 // where the string is copied into (bufsize should include room for the terminating null byte).
@@ -70,6 +189,38 @@ int zLuaGetDataString(lua_State *L, const char *key, char *dest, size_t bufsize)
     lua_pop(L, 1);
     return res;
 }
+
+// Same as zLuaGetDataString, but allocates new string and points *dest to it. If len is not NULL,
+// length of string (excluding trailing NUL byte) is returned in *len.
+int zLuaGetDataStringA(lua_State *L, const char *key, char **dest, size_t *len)
+{
+    int res = 0;
+    const char *str;
+    char *copy;
+
+    // Push key on the stack and get the corresponding value.
+    lua_pushstring(L, key);
+    lua_gettable(L, -2);
+    str = lua_tostring(L, -1);
+
+    if (str && strlen(str)) {
+
+        if ( (copy = strdup(str)) ) {
+
+            if (len) *len = strlen(copy);
+            *dest = copy;
+            res = 1;
+
+        } else {
+            zWarning("%s: Failed to duplicate string.", __func__);
+        }
+    }
+
+    // Pop value from the stack.
+    lua_pop(L, 1);
+    return res;
+}
+
 
 
 // Reads number from data table and stores it as unsigned int at *dest. If the value given is a

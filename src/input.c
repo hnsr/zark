@@ -5,7 +5,6 @@
 #ifndef WIN32
 #include <strings.h>
 #endif
-
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
@@ -59,8 +58,6 @@ static int zGrowTextBuffer(ZTextBuffer *textbuf, unsigned int bytes)
     // in. Need to account for the null-byte as well since that is not accounted for in
     // textbuf->bytes.
     reqsize = (((textbuf->bytes+1 + bytes)/Z_TEXTBUFFER_SIZE)+1) * Z_TEXTBUFFER_SIZE;
-
-    //zDebug("reqsize=%d, bufsize=%d", reqsize, textbuf->bufsize);
 
     // See if I either need to do the initial alloc, grow it, or nothing if it already fits.
     if ( !(textbuf->buf) ) {
@@ -235,39 +232,26 @@ void zResetTextBuffer(ZTextBuffer *textbuf)
 
 
 // Lookup ZKeyBinding by ZKeyEvent. Returns pointer to ZKeyBinding on success or NULL otherwise.
-ZKeyBinding *zLookupKeyBinding(const ZKeyEvent *zkev)
+static ZKeyBinding *zLookupKeyBinding(const ZKeyEvent *zkev)
 {
     unsigned int i;
+    ZKeyBinding *kb = keybindings;
 
     // Loop over all defined keybindings until there's a match with the given keyevent.
+    // TODO: If I want to make this faster, just create an array of NUM_KEYS pointers to linked
+    // lists of keybindings for each key.
     for (i = 0; i < numkeybindings; i++) {
 
-        if ( zkev->key      == keybindings[i].keyevent.key &&
-             zkev->keystate == keybindings[i].keyevent.keystate &&
-             zkev->modmask  == keybindings[i].keyevent.modmask ) {
-
-            return &(keybindings[i]);
+        if ( zkev->key      == kb->keyevent.key &&
+             zkev->keystate == kb->keyevent.keystate &&
+             zkev->modmask  == kb->keyevent.modmask ) {
+            return kb;
         }
+
+        kb++;
     }
 
     return NULL;
-}
-
-
-
-// Lookup ZKey by keyname.
-ZKey zLookupKey(const char *keyname)
-{
-    int i;
-
-    // Might as well start at 1 (skip Z_KEY_UNKNOWN)
-    for (i = 1; i < Z_NUM_KEYS; i++) {
-
-        if (strcasecmp(keyname, zKeyName(i)) == 0)
-            return i;
-    }
-
-    return Z_KEY_UNKNOWN;
 }
 
 
@@ -293,9 +277,10 @@ const char *zKeyDesc(ZKey key)
 
 
 // Returns a pointer to a string containing a friendly name of the key event in the form of for
-// example "CTRL+ALT+Q press" or "Q release". The string is allocated in static memory and should
-// not be freed. It will be modified on a subsequent call of this function.
-char *zKeyEventName(ZKeyEvent *kev)
+// example "CTRL+ALT+Q press" or "Q release" (if show_state is 0, no press/release will be added).
+// The string is allocated in static memory and should not be freed. It will be modified on a
+// subsequent call of this function.
+char *zKeyEventName(ZKeyEvent *kev, int show_state)
 {
     // I'm concatenating into a statically allocated string of fixed size. Since the maximum length
     // of the key names are somewhat fixed this shouldnt be a problem.
@@ -310,7 +295,9 @@ char *zKeyEventName(ZKeyEvent *kev)
     if (kev->modmask & Z_KEY_MOD_SUPER) strcat(name, "SUPER+");
 
     strcat(name, zKeyName(kev->key)+4); // Remove KEY_ prefix.
-    strcat(name, kev->keystate == Z_KEY_STATE_PRESS ? " press  " : " release");
+
+    if (kev->keystate && show_state)
+        strcat(name, kev->keystate == Z_KEY_STATE_PRESS ? " press" : " release");
 
     return name;
 }
@@ -318,8 +305,7 @@ char *zKeyEventName(ZKeyEvent *kev)
 
 
 // Linked list of currently pressed keys (see zDispatchKeyEvent).
-// XXX: Maybe it's better to just have a fixed size array or some kind of pooling to prevent a
-// lot of allocating/freeing of memory.
+// XXX: Maybe a linked list isn't the best solution here
 static ZKeyEvent *pressed_keys;
 
 // Release currently pressed keys, and, if skip_keybinds is not set, run associated keybindings.
@@ -332,13 +318,16 @@ void zReleaseKeys(int skip_keybinds)
 
         // Run keybinding.
         if (!skip_keybinds) {
+
             cur->keystate = Z_KEY_STATE_RELEASE;
+
             if ( (kb = zLookupKeyBinding(cur)) != NULL ) {
-// FIXME FIXME
-#if 0
-                if (kb->numcommands > 0 )
-                    zExecParsedCmds(kb->parsedcmds, kb->numcommands);
-#endif
+
+                if (kb->impulse && !kb->impulse->press_only) {
+                    kb->impulse->handler(kb->impulse->arg, Z_IMPULSE_STOP);
+                } else if (kb->lua) {
+                    zLuaRunCode(&kb->code);
+                }
             }
         }
         tmp = cur->next;
@@ -398,37 +387,39 @@ void zDispatchKeyEvent(const ZKeyEvent *zkev)
         zAddKeyPressToList(zkev);
 
         if ( (kb = zLookupKeyBinding(zkev)) != NULL ) {
-// FIXME FIXME
-#if 0
-            if (kb->numcommands > 0 )
-                zExecParsedCmds(kb->parsedcmds, kb->numcommands);
-#endif
+            if (kb->impulse)
+                kb->impulse->handler(kb->impulse->arg, Z_IMPULSE_START);
+            else if (kb->lua)
+                zLuaRunCode(&kb->code);
         }
     } else {
 
+        // Go through pressed_keys and run keybinding if the keysym matches (ignoring modmask).
         ZKeyEvent *cur = pressed_keys, **prevptr = &pressed_keys;
 
-        // Go through pressed_keys and run keybinding if the keysym matches (ignoring modmask).
         while (cur) {
 
-            // Check if current key matches, if so, run keybinding and unlink.
+            // XXX: Note that I just check the key value, not the modmask, these are ignored
+            // intentionally for key releases, since that makes more sense to the user (i.e. if you
+            // have something bound to CTRL+A press and release, the user might release CTRL before
+            // it releases A, but will probably still want to run the release keybinding for CTRL+A.
             if (cur->key == zkev->key) {
 
                 // Run keybinding for the key release.
                 cur->keystate = Z_KEY_STATE_RELEASE;
+
                 if ( (kb = zLookupKeyBinding(cur)) != NULL ) {
-// FIXME FIXME
-#if 0
-                    if (kb->numcommands > 0 )
-                        zExecParsedCmds(kb->parsedcmds, kb->numcommands);
-#endif
+
+                    if (kb->impulse && !kb->impulse->press_only)
+                        kb->impulse->handler(kb->impulse->arg, Z_IMPULSE_STOP);
+                    else if (kb->lua)
+                        zLuaRunCode(&kb->code);
                 }
 
                 // Unlink.
                 *prevptr = cur->next;
                 free(cur);
                 cur = *prevptr;
-
             } else {
                 prevptr = &(cur->next);
                 cur = cur->next;
@@ -479,43 +470,40 @@ static int zGrowKeyBindingsArray(void)
 
 
 
-// Add keybinding to global array for given key event. cmdstring contains the command string for the
-// binding and should always be a valid pointer. If there is a syntax error in cmdstring it is not
-// added and FALSE is returned, else TRUE. zAddKeyBinding will take care of making sure cmdstring is
-// either freed (when parsing it fails) or attached to the keybinding.
-int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring)
+// Adds a keybinding. Either impulse or lua must be given, but not both. The lua string should be
+// dynamically allocated so it can be freed if the keybinding is replaced later. zAddKeyBinding will
+// make sure to free lua if adding the keybinding fails. Returns Z_ERROR_LUA if pre-compiling lua
+// fails, Z_ERROR on all other errors, or 0 on success.
+static int zAddKeyBinding(const ZKeyEvent *zkev, ZImpulse *impulse, char *lua)
 {
-    // FIXME FIXME
-#if 0
     ZKeyBinding *kb;
-    ZParsedCommand *parsedcmds;
-    int numcmds;
+    ZLuaCode luacode;
 
-    // If parsing the cmdline fails below I may have resized for nothing, but it shouldn't really be
-    // a problem. If growing the array fails and there's no space left I return here to prevent
-    // overflowing it.
+    assert(!(impulse && lua) && (impulse || lua));
+
     if (zGrowKeyBindingsArray() == 0) {
-        free(cmdstring);
-        return FALSE;
+        zWarning("%s: Failed to add keybinding, growing keybindings array failed.", __func__);
+        free(lua);
+        return Z_ERROR;
     }
 
-    // Parse cmdstring, don't bother doing anything if 0 commands were parsed from the cmdstring.
-    if ( (numcmds = zParseCmdString(cmdstring, &parsedcmds)) == 0) {
-
-        //zDebug("%s: No commands parsed for %s, skipping.", __func__, zKeyName(zkev->key));
-        free(cmdstring);
-        return FALSE;
+    // Try to pre-compile lua string (if needed).
+    if (lua) {
+        if (!zLuaCompileCode(Z_VM_CONSOLE, &luacode, lua)) {
+            free(lua);
+            return Z_ERROR_LUA;
+        }
     }
 
     // See if there already is a binding for this keyevent, overwrite it if there is.
     if ( (kb = zLookupKeyBinding(zkev)) != NULL) {
 
         // Maybe turn this into a nicer warning with keyname/modifiers.
-        //zDebug("%s: Overriding keybinding for %s.", __func__, zKeyName(zkev->key));
+        zDebug("%s: Overriding keybinding for %s.", __func__, zKeyName(zkev->key));
 
-        // Free all the allocated data for the existing keybinding.
-        zFreeParsedCmds(kb->parsedcmds, kb->numcommands);
-        free(kb->cmdstring);
+        // Free old lua string and delete compiled chunk.
+        zLuaDeleteCode(&kb->code);
+        free(kb->lua);
 
     } else {
 
@@ -524,70 +512,67 @@ int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring)
         kb = &(keybindings[numkeybindings++]);
     }
 
-    kb->keyevent    = *zkev;
-    kb->cmdstring   = cmdstring;
-    kb->numcommands = numcmds;
-    kb->parsedcmds  = parsedcmds;
-#endif
-    free(cmdstring);
-    return TRUE;
+    kb->keyevent = *zkev;
+    kb->impulse  = impulse;
+    kb->lua      = lua;
+
+    // Only copy this over if lua was given to prevent msvc run-time warning about using
+    // uninitialized value..
+    if (lua)
+        kb->code = luacode;
+
+    return 0;
 }
 
 
 
-// Process keybinding. This is called from two proxy functions keyup/keydown that indicate the
-// keystate as the parameters, and passes on the other parameters iven by the user. The user should
-// pass to keybind/keyup the key name, a command string, and zero or more modifier key names.
+// Processes a keybinding passed from lua. Called by the lua glue code with table as parameter.
 static int zLuaBindKey(lua_State *L)
 {
-    int modcount;
-    int params = lua_gettop(L);
-    ZKey key;
+    unsigned int key = 0, state = 0, modmask = 0;
     ZKeyEvent zkev;
-    const char *cmdstring;
-    char *cmdstring_copy;
+    ZImpulse *impulse;
+    char *lua = NULL;
+    unsigned int imp = 0;
 
-    if (params < 3 || !lua_isnumber(L, 1) || !lua_isnumber(L, 2) || !lua_isstring(L, 3) ) {
-        zLuaWarning(L, 2, "Not enough or invalid parameters for keybinding.");
-        return 0;
-    }
+    assert(lua_istable(L, -1));
 
-    // Need to make a copy of the command string, for passing it to zAddKeyBinding
-    cmdstring = lua_tostring(L, 3);
-    if (!cmdstring || !strlen(cmdstring)) {
-        zLuaWarning(L, 2, "No valid command string given.");
-        return 0;
-    }
+    // Get key event properties from table
+    zLuaGetDataUint(L, "state", &state);
+    zLuaGetDataUint(L, "key",   &key);
+    zLuaGetDataUint(L, "mods",  &modmask);
 
-    cmdstring_copy = malloc(strlen(cmdstring)+1);
-    if (!cmdstring_copy) {
-        zLuaWarning(L, 2, "Failed to allocate memory for cmdstring.");
-        return 0;
-    }
-    strcpy(cmdstring_copy, cmdstring);
-
-    key = (ZKey) lua_tonumber(L, 2);
+    // Check that key is valid, and mask away invalid modmask bits, state is given by glue lua and
+    // should be correct)
     if ( !(key > 0 && key < Z_NUM_KEYS) ) {
-        zLuaWarning(L, 2, "Invalid key given. %d", key);
+        zLuaWarning(L, 2, "Invalid key given for keybinding.");
         return 0;
     }
-
     zkev.key = key;
-    zkev.keystate = ((int) lua_tonumber(L, 1)) ? Z_KEY_STATE_PRESS : Z_KEY_STATE_RELEASE;
-    zkev.modmask = 0;
+    zkev.modmask = modmask & Z_KEY_MOD_MASK;
+    zkev.keystate = state == 0 ? Z_KEY_STATE_RELEASE : Z_KEY_STATE_PRESS;
 
-    // Now OR together all the extra parameters and use them as the modmask.
-    modcount = params - 3;
-    while (modcount--) {
-        zkev.modmask |= (unsigned int) lua_tonumber(L, params-modcount);
+    // See if a Lua string was passed, or an impulse.
+    if(zLuaGetDataStringA(L, "lua", &lua, NULL)) {
+
+        if (zAddKeyBinding(&zkev, NULL, lua) == Z_ERROR_LUA) {
+            zLuaWarning(L, 2, "Failed to add keybinding, bad lua for key \"%s\".",
+                zKeyName(zkev.key));
+        }
+
+    } else if(zLuaGetDataUint(L, "imp", &imp) && (impulse = zLookupImpulse(imp))) {
+
+        // For impulses, add bindings for both key up/down. No need to give a warning about errors
+        // here since adding impulse keybindings is unlikely to fail.
+        zkev.keystate = Z_KEY_STATE_PRESS;
+        zAddKeyBinding(&zkev, impulse, NULL);
+        zkev.keystate = Z_KEY_STATE_RELEASE;
+        zAddKeyBinding(&zkev, impulse, NULL);
+
+    } else {
+        zLuaWarning(L, 2, "Invalid script or impulse given for keybinding.");
+        return 0;
     }
-    // Make sure only valid bits are set.
-    zkev.modmask &= Z_KEY_MOD_MASK;
-
-    //zDebug("zLuaBindKey %s, state %u, modmask %u", zKeyName(key), zkev.keystate, zkev.modmask);
-
-    if (!zAddKeyBinding(&zkev, cmdstring_copy))
-        zLuaWarning(L, 2, "Failed to add keybinding, invalid command string.");
 
     return 0;
 }
@@ -604,11 +589,11 @@ static int zParseKeyBindings(const char *filename, const char *prefix, int flags
 
     if (!path) {
         zWarning("%s: Failed to construct path for \"%s\".", __func__, filename);
-        return Z_PARSE_ERROR;
+        return Z_ERROR;
     }
 
     if (zPathExists(path) != Z_EXISTS_REGULAR)
-        return Z_PARSE_FILEERROR;
+        return Z_ERROR_FILE;
 
 
     zPrint("Loading keybindings from \"%s\".\n", path);
@@ -617,10 +602,15 @@ static int zParseKeyBindings(const char *filename, const char *prefix, int flags
     lua_pushcfunction(L, luaopen_base);
     lua_call(L, 0, 0);
 
-    // Export all the keys and modifiers as globals.
+    // Export all the keys, impulses, and modifiers as globals.
     for (i = 0; i < Z_NUM_KEYS; i++) {
         lua_pushinteger(L, i);
         lua_setglobal(L, zKeyName(i));
+    }
+
+    for (i = 0; impulses[i].name; i++) {
+        lua_pushinteger(L, i);
+        lua_setglobal(L, impulses[i].name);
     }
 
     lua_pushinteger(L, Z_KEY_MOD_CTRL);  lua_setglobal(L, "MOD_CTRL");
@@ -629,18 +619,20 @@ static int zParseKeyBindings(const char *filename, const char *prefix, int flags
     lua_pushinteger(L, Z_KEY_MOD_SHIFT); lua_setglobal(L, "MOD_SHIFT");
     lua_pushinteger(L, Z_KEY_MOD_SUPER); lua_setglobal(L, "MOD_SUPER");
 
-    // I make sure bindkey can't be called directly so the call stack level I pass to zLuaWarning
-    // always refers to the right chunk.
-    lua_register(L, "bindkey", zLuaBindKey);
-    zLua(L, "local b = bindkey\n"
-            "keydown = function(key, cmd, ...) b(1, key, cmd, ...) end\n"
-            "keyup   = function(key, cmd, ...) b(0, key, cmd, ...) end\n"
-            "bindkey = nil\n");
+    // Register keybinding handler function, with some glue so it makes more sense to the user.
+    lua_register(L, "bindkey",  zLuaBindKey);
+    zLua(L,
+        "local b = bindkey\n"
+        "script_down = function(k,l,...) arg.n=nil;b {state=1, key=k, lua=l, mods=arg} end\n"
+        "script_up   = function(k,l,...) arg.n=nil;b {state=0, key=k, lua=l, mods=arg} end\n"
+        "impulse     = function(k,i,...) arg.n=nil;b {state=1, key=k, imp=i, mods=arg} end\n"
+        "bindkey = nil\n"
+    );
 
     if (luaL_dofile(L, path)) {
         zWarning("Failed to parse keybindings: %s", lua_tostring(L, -1));
         lua_close(L);
-        return Z_PARSE_SYNTAXERROR;
+        return Z_ERROR_SYNTAX;
     }
 
     lua_close(L);
@@ -663,7 +655,7 @@ void zLoadKeyBindings(void)
     if ( (err = zParseKeyBindings(Z_FILE_KEYBINDINGS, NULL, Z_FILE_FORCEUSER)) ) {
 
         // See if there was a syntax error.
-        userkbs_badsyntax = err == Z_PARSE_SYNTAXERROR;
+        userkbs_badsyntax = err == Z_ERROR_SYNTAX;
 
         zWarning("Failed to load user keybindings, falling back to default keybindings.");
 
@@ -688,6 +680,12 @@ void zSaveKeyBindings(void)
         return;
     }
 
+    if (fs_nosave) {
+        zPrint("Not writing keybindings (fs_nosave).\n");
+        return;
+    }
+
+
     if ( !(fp = zOpenFile(Z_FILE_KEYBINDINGS, NULL, &path, Z_FILE_FORCEUSER | Z_FILE_WRITE)) ) {
         zWarning("Failed to open \"%s\" for writing keybindings.", path);
         return;
@@ -699,15 +697,25 @@ void zSaveKeyBindings(void)
 
         kb = keybindings+i;
 
-        // Looks better if the comma follows the key name directly!
+        // Append comma to keyname so it looks slightly nicer
         assert(strlen(zKeyName(kb->keyevent.key)) < 31);
         strcpy(keyparam, zKeyName(kb->keyevent.key));
         strcat(keyparam, ",");
 
-        if (kb->keyevent.keystate == Z_KEY_STATE_RELEASE)
-            fprintf(fp, "keyup  (%-15s \"%s\"", keyparam, kb->cmdstring);
-        else
-            fprintf(fp, "keydown(%-15s \"%s\"", keyparam, kb->cmdstring);
+        if (kb->impulse ) {
+            // For impulses, since they are always bound to both key presses/releases, I only write
+            // them out for the key press event.
+            if (kb->keyevent.keystate == Z_KEY_STATE_PRESS)
+                fprintf(fp, "impulse    (%-15s %s", keyparam, kb->impulse->name);
+            else
+                continue;
+
+        } else {
+            if (kb->keyevent.keystate == Z_KEY_STATE_RELEASE)
+                fprintf(fp, "script_up  (%-15s \"%s\"", keyparam, kb->lua);
+            else
+                fprintf(fp, "script_down(%-15s \"%s\"", keyparam, kb->lua);
+        }
 
         if (kb->keyevent.modmask & Z_KEY_MOD_CTRL)  fprintf(fp, ", MOD_CTRL");
         if (kb->keyevent.modmask & Z_KEY_MOD_LALT)  fprintf(fp, ", MOD_LALT");

@@ -38,7 +38,10 @@ zark_SOURCES = variables.def\
 			   console.c\
 			   scene.h\
 			   scene.c\
-			   script.h\
-			   script.c
+			   zlua.h\
+			   zlua.c\
+			   zlua_console.c\
+			   impulse.h\
+			   impulse.c
 
 

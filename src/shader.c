@@ -146,7 +146,7 @@ static ZShader *zCompileShader(unsigned int flags, const char *sourcefile, GLenu
 
     shader_source = zGetStringFromFile(zGetPath(sourcefile, NULL, Z_FILE_TRYUSER));
 
-    if (printdiskload) zDebug("Loading shader \"%s\" with flags %#x from disk.", sourcefile, flags);
+    if (fs_printdiskload) zDebug("Loading shader \"%s\" with flags %#x from disk.", sourcefile, flags);
 
     if (!shader_source) {
         zError("Failed to read shader source for \"%s\".", sourcefile);

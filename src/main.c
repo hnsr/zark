@@ -66,10 +66,13 @@ int zMain(int argc, char** argv)
     ilInit();
     iluInit();
 
+    zLuaInit();
+
     zLoadMaterials();
     zLoadConfig();
     zLoadKeyBindings();
-    // FIXME FIXME zLoadCommands(Z_FILE_STARTUP);
+
+    zLuaRunFile(Z_VM_CONSOLE, Z_FILE_STARTUP);
 
     zOpenWindow(r_winwidth, r_winheight);
 
@@ -95,6 +98,9 @@ int zMain(int argc, char** argv)
     zSaveKeyBindings();
 
     zCloseWindow();
+
+    zLuaDeinit();
+
     zShutdown();
 
     return EXIT_SUCCESS;

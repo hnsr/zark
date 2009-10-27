@@ -71,7 +71,8 @@ static const char *zPosableInfo(ZPosable *pos)
 
     switch (pos->type) {
         case Z_POSABLE_STATICMESH:
-            snprintf(posinfo, Z_RESOURCE_NAME_SIZE+199, "static mesh \"%s\"", pos->subject.mesh->name);
+            snprintf(posinfo, Z_RESOURCE_NAME_SIZE+199, "static mesh \"%s\"",
+                pos->subject.mesh->name);
             break;
         default:
             strcat(posinfo, "unknown posable type");
@@ -216,7 +217,7 @@ void zAddPosableToScene(ZScene *scene, ZPosable *posable, int sky)
 
 
 
-void zAddMeshToScene(ZScene *scene, char *name, int sky)
+void zAddMeshToScene(ZScene *scene, const char *name, int sky)
 {
     ZPosable *pos;
     ZMesh *mesh;

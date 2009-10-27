@@ -658,7 +658,7 @@ static ZTexture *zLoadTexture(const char *name)
     tex->gltexname = 0;
     tex->next = NULL;
 
-    if (printdiskload) zDebug("Loading texture \"%s\" from disk.", tex->name);
+    if (fs_printdiskload) zDebug("Loading texture \"%s\" from disk.", tex->name);
 
     // Load image and load OpenGL texture.
     if ( (img = zLoadImage(zGetPath(tex->name, NULL, Z_FILE_REWRITE_DIRSEP | Z_FILE_TRYUSER))) ) {

@@ -20,8 +20,6 @@
 // Debugging stuff
 void zPrintCurrentMVMatrix(void);
 
-void zPrintInputStuff(unsigned int what);
-
 void zPrint(char *format, ...);
 
 void zError(char *format, ...);
@@ -38,9 +36,9 @@ void zDebug(char *format, ...);
 #endif
 
 // Pretty printing
-const char *zGetFloat3String(float *f);
+const char *zGetFloat3String(const float *f);
 
-const char *zGetFloat4String(float *f);
+const char *zGetFloat4String(const float *f);
 
 
 // File stuff

@@ -86,7 +86,7 @@ void zDrawScene(ZScene *scene);
 
 void zAddPosableToScene(ZScene *scene, ZPosable *posable, int sky);
 
-void zAddMeshToScene(ZScene *scene, char *name, int sky);
+void zAddMeshToScene(ZScene *scene, const char *name, int sky);
 
 void zMakeSceneNonResident(ZScene *scene);
 

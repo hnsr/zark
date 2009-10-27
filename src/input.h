@@ -2,6 +2,7 @@
 #define __INPUT_H__
 
 #include <stdio.h>
+#include "impulse.h"
 
 // List of physical keys I support for keybindings. For now I'll just add all of those on my own
 // QWERTY keyboard, will have to investigate about all the possible keys of other keyboard types.
@@ -24,33 +25,29 @@ typedef enum ZKey
 #define Z_KEY_MOD_RALT   (1 << 2)
 #define Z_KEY_MOD_SHIFT  (1 << 3)
 #define Z_KEY_MOD_SUPER  (1 << 4)
-#define Z_KEY_MOD_MASK   (Z_KEY_MOD_CTRL  | Z_KEY_MOD_LALT  | Z_KEY_MOD_RALT  |\
+#define Z_KEY_MOD_MASK   (Z_KEY_MOD_CTRL | Z_KEY_MOD_LALT | Z_KEY_MOD_RALT |\
                           Z_KEY_MOD_SHIFT | Z_KEY_MOD_SUPER)
 
 // ZKeyEvent - everything that needs to be known for a key event.
 typedef struct ZKeyEvent
 {
     enum ZKey key;
-    unsigned int keystate;  // FIXME: combine keystate and modmask?
+    unsigned int keystate;
     unsigned int modmask;
-    struct ZKeyEvent *next; // Only used for list of currently down keys.
+    struct ZKeyEvent *next; // Only used for pressed_keys list.
 
 } ZKeyEvent;
 
 
-
-// ZKeyBinding - represents the binding between a key event and a command string.
+// ZKeyBinding - represents the binding between a key event and an impulse, or Lua script for
+// running console commands.
 typedef struct ZKeyBinding
 {
     ZKeyEvent keyevent;
-    char *cmdstring;
+    ZImpulse *impulse;
+    char *lua;
+    ZLuaCode code;
 
-    // FIXME FIXME 
-#if 0
-    // Parsed commands, cmdstring is kept around only for saving keybindings on exit.
-    unsigned int numcommands;
-    ZParsedCommand *parsedcmds;
-#endif
 } ZKeyBinding;
 
 extern ZKeyBinding *keybindings;
@@ -109,25 +106,20 @@ extern ZTextInputCallback text_input_cb;
 
 
 
+
 void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str);
 
 void zResetTextBuffer(ZTextBuffer *textbuf);
-
-ZKeyBinding *zLookupKeyBinding(const ZKeyEvent *zkev);
-
-ZKey zLookupKey(const char *keyname);
 
 const char *zKeyName(ZKey key);
 
 const char *zKeyDesc(ZKey key);
 
-char *zKeyEventName(ZKeyEvent *kev);
+char *zKeyEventName(ZKeyEvent *kev, int show_state);
 
 void zReleaseKeys(int skip_keybinds);
 
 void zDispatchKeyEvent(const ZKeyEvent *zkev);
-
-int zAddKeyBinding(const ZKeyEvent *zkev, char *cmdstring);
 
 void zLoadKeyBindings(void);
 
