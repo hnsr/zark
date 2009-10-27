@@ -627,6 +627,47 @@ static int zConsoleToggle(lua_State *L)
 }
 
 
+static int zConsoleRevert(lua_State *L)
+{
+    const char *varname = luaL_checkstring(L, 1);
+    ZVariable *var = zLookupVariable(varname);
+
+    if (!var) {
+        zError("Failed to revert variable \"%s\" to default, not a valid variable name.", varname);
+        return 0;
+    }
+
+    switch (var->type) {
+
+        case Z_VAR_TYPE_INT:
+            zVarSetInt(var, var->int_default);
+            break;
+        case Z_VAR_TYPE_FLOAT:
+            zVarSetFloat(var, var->float_default);
+            break;
+        case Z_VAR_TYPE_FLOAT3:
+            memcpy(var->varptr, var->float3_default, sizeof(float)*3);
+            break;
+        case Z_VAR_TYPE_FLOAT4:
+            memcpy(var->varptr, var->float4_default, sizeof(float)*4);
+            break;
+        case Z_VAR_TYPE_STRING:
+            // Unlikely, but just to be safe.
+            if (strlen(var->str_default) < Z_VAR_STRING_SIZE)
+                strcpy((char *)var->varptr, var->str_default);
+            else
+                zError("Failed to revert variable \"%s\" to default, default string too large...",
+                    varname);
+            break;
+        default:
+            assert(0 && "Unknown variable type.");
+    }
+
+    return 0;
+}
+
+
+
 ZLuaConsoleFunc console_funcs[] = {
     { "help",            zConsoleHelp,            "Show usage info for a command or variable.", "name (string)" },
     { "listkeys",        zConsoleListKeys,        "Lists all defined key symbols.",             NULL },
@@ -654,6 +695,7 @@ ZLuaConsoleFunc console_funcs[] = {
     { "increase",        zConsoleIncrease,        "Increase value of scalar variable.",         "varname (string), increment (number, optional)" },
     { "decrease",        zConsoleDecrease,        "Decrease value of scalar variable.",         "varname (string), decrement (number, optional)" },
     { "toggle",          zConsoleToggle,          "Negate value of integer variable.",          "varname (string)" },
+    { "revert",          zConsoleRevert,          "Revert value of variable to default.",       "varname (string)" },
     { NULL, NULL, NULL, NULL }
 };
 
