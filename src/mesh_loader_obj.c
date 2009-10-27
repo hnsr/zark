@@ -157,7 +157,7 @@ static int parse_token(void)
 #define OBJ_DATATYPE_VERTEX 0
 #define OBJ_DATATYPE_NORMAL 1
 #define OBJ_DATATYPE_TEXCOORD 2
-static int parse_vec3(int type)
+static void parse_vec3(int type)
 {
     ZVec3 v = { 0.0f, 0.0f, 0.0f };
     ZVec3 **buffer;
@@ -189,6 +189,7 @@ static int parse_vec3(int type)
 
             zFatal("%s: Failed to (re)allocate more memory for datatype data while parsing \"%s\".",
                 __func__, filename);
+            // FIXME: Maybe handle this more gracefully?
             exit(EXIT_FAILURE);
         }
 
@@ -210,16 +211,13 @@ static int parse_vec3(int type)
     }
 
     (*buffer)[(*buffer_count)++] = v;
-
-    return 1;
 }
 
 
 
-// Check if the given vertex format matches the aleady-established one. If it matches, returns 1,
-// else 0. If no format has been established yet, it establishes the new format using the given
-// values and returns 1.
-//static int check_format(int has_t, int has_n) {
+// Check if the given vertex format matches the aleady-established one. If it matches, returns TRUE,
+// else FALSE. If no format has been established yet, it establishes the new format using the given
+// values and returns TRUE.
 static inline int check_format(unsigned int flags) {
 
     if (!format_picked) {
@@ -236,23 +234,23 @@ static inline int check_format(unsigned int flags) {
 
         mesh->flags |= flags;
         format_picked = 1;
-        return 1;
+        return TRUE;
 
     } else {
 
         // Check of given format matches established one.
         if ( (mesh->flags & (Z_MESH_HAS_NORMALS | Z_MESH_HAS_TEXCOORDS )) == flags )
-            return 1;
+            return TRUE;
     }
 
-    return 0;
+    return FALSE;
 }
 
 
 
 // Dereference the indices to vertex, texcoord and normal data passed in by v, vt and vn and store
 // the value in *v3v, *v3vt, and *v3vn respectively. v is required, vt and vn may be set to 0 so
-// they will be ignored.
+// they will be ignored. Returns TRUE on sucess, else FALSE.
 static inline int dereference_vertex(int v, int vt, int vn, ZVec3 *v3v, ZVec3 *v3vt, ZVec3 *v3vn)
 {
     // Dereference vertex.
@@ -261,7 +259,7 @@ static inline int dereference_vertex(int v, int vt, int vn, ZVec3 *v3v, ZVec3 *v
     else if (v < 0 && -v <= (int) vertex_count)
         *v3v = vertices[vertex_count+v]; // Negative index.
     else
-        return 0; // 0 or out-of-range index.
+        return FALSE; // 0 or out-of-range index.
 
     // Dereference texcoord but happily ignore if 0.
     if (vt) {
@@ -271,7 +269,7 @@ static inline int dereference_vertex(int v, int vt, int vn, ZVec3 *v3v, ZVec3 *v
         else if (vt < 0 && -vt <= (int) texcoord_count)
             *v3vt = texcoords[texcoord_count+vt];
         else
-            return 0;
+            return FALSE;
     }
 
     // Same for the normal.
@@ -282,24 +280,24 @@ static inline int dereference_vertex(int v, int vt, int vn, ZVec3 *v3v, ZVec3 *v
         else if (vn < 0 && -vn <= (int) normal_count)
             *v3vn = normals[normal_count+vn];
         else
-            return 0;
+            return FALSE;
     }
 
-    return 1;
+    return TRUE;
 }
 
 
 
-// Try to find a matching vertex so it can be reused. Returns 1 and writes index if match is found,
-// or else 0 is returned. I'm searching backward as that should be more likely to find a match early
-// on..
+// Try to find a matching vertex so it can be reused. Returns TRUE and writes index if match is
+// found, else FALSE is returned. I'm searching backward as that should be more likely to find a
+// match early on..
 static inline int find_matching_vertex(float *new_vertex, unsigned int *index)
 {
     unsigned int start = 0, end;
     float *curvert;
     size_t size = mesh->elem_size * sizeof(float);
 
-    if (groups[cur_group].num_vertices == 0) return 0;
+    if (groups[cur_group].num_vertices == 0) return FALSE;
 
     if ( !(load_flags & Z_MESH_LOAD_THOROUGH) &&
         groups[cur_group].num_vertices > OBJ_VERTEX_SEARCH_WINDOW )
@@ -314,17 +312,17 @@ static inline int find_matching_vertex(float *new_vertex, unsigned int *index)
     do {
         if ( memcmp(curvert, new_vertex, size) == 0 ) {
             *index = end;
-            return 1;
+            return TRUE;
         }
         curvert -= mesh->elem_size;
     } while (end-- > start);
 
-    return 0;
+    return FALSE;
 }
 
 
 
-// Grow buffers if needed for current group.
+// Grow buffers if needed for current group. Returns FALSE on failure, else TRUE.
 static inline int grow_group_buffers(int type)
 {
     assert(format_picked);
@@ -341,7 +339,7 @@ static inline int grow_group_buffers(int type)
 
             if (!tmp) {
                 zWarning("Failed to allocate memory for mesh vertex buffer.");
-                return 0;
+                return FALSE;
             }
 
             groups[cur_group].vertices = tmp;
@@ -359,7 +357,7 @@ static inline int grow_group_buffers(int type)
 
             if (!tmp) {
                 zWarning("Failed to allocate memory for mesh index buffer.");
-                return 0;
+                return FALSE;
             }
 
             groups[cur_group].indices = tmp;
@@ -370,13 +368,13 @@ static inline int grow_group_buffers(int type)
         assert(0 && "Invalid buffer type given.");
     }
 
-    return 1;
+    return TRUE;
 }
 
 
 
-// Add given vertex to mesh. Returns 1 if an error occured (makes it easier to check for errors from
-// multiple calls in one go.
+// Add given vertex to mesh. Returns Z_ERROR if an error occured, else 0 (makes it easier to check
+// for errors from multiple calls in one go.
 static inline int add_vertex_to_mesh(ZVec3 *v, ZVec3 *vt, ZVec3 *vn)
 {
     float new_vertex[8];
@@ -404,7 +402,7 @@ static inline int add_vertex_to_mesh(ZVec3 *v, ZVec3 *vt, ZVec3 *vn)
         // Add just the matched index.
         if ( !grow_group_buffers(OBJ_GROW_INDICES) ) {
             zDebug("%s: Failed to grow group index buffer.", __func__);
-            return 1;
+            return Z_ERROR;
         }
 
         groups[cur_group].indices[groups[cur_group].num_indices] = match_index;
@@ -416,7 +414,7 @@ static inline int add_vertex_to_mesh(ZVec3 *v, ZVec3 *vt, ZVec3 *vn)
         if ( !(load_flags & Z_MESH_LOAD_NOINDEX) ) {
             if ( !grow_group_buffers(OBJ_GROW_INDICES) ) {
                 zDebug("%s: Failed to grow group index buffer.", __func__);
-                return 1;
+                return Z_ERROR;
             }
 
             groups[cur_group].indices[groups[cur_group].num_indices] = groups[cur_group].num_vertices;
@@ -428,7 +426,7 @@ static inline int add_vertex_to_mesh(ZVec3 *v, ZVec3 *vt, ZVec3 *vn)
         if ( !grow_group_buffers(OBJ_GROW_VERTICES) ) {
             // TODO: Try to clean up added index.
             zDebug("%s: Failed to grow mesh vertex buffer.", __func__);
-            return 1;
+            return Z_ERROR;
         }
 
         memcpy(groups[cur_group].vertices+(groups[cur_group].num_vertices*mesh->elem_size),
@@ -442,7 +440,7 @@ static inline int add_vertex_to_mesh(ZVec3 *v, ZVec3 *vt, ZVec3 *vn)
 
 
 // Parses a face and dereferences the vertex, normal, and texcoord indices to store them in the
-// mesh's vertex buffer.
+// mesh's vertex buffer. Returns TRUE on success, or else FALSE.
 static int parse_face(void)
 {
     unsigned int face_vertex_count = 0, offset = 0, parsed_format = 0;
@@ -479,7 +477,7 @@ static int parse_face(void)
             parsed_format = 0;
         else {
             zWarning("Invalid vertex format on line %d in \"%s\".", line_count, filename);
-            return 0;
+            return FALSE;
         }
 
         // Indices have been parsed, make sure format matches and dereference the indices.
@@ -490,7 +488,7 @@ static int parse_face(void)
             if ( !dereference_vertex(vertex_i, texcoord_i, normal_i,
                     face_vertices+offset, face_texcoords+offset, face_normals+offset ) ) {
                 zWarning("Failed to dereference indices on line %u in \"%s\".", line_count, filename);
-                return 0;
+                return FALSE;
             }
         } else {
             if (!warned_inconsistency) {
@@ -499,7 +497,7 @@ static int parse_face(void)
                 warned_inconsistency = 1;
             }
             ignored_faces++;
-            return 0;
+            return FALSE;
         }
 
         // If I have now parsed more than 2 vertices, I can write a triangle to the mesh.
@@ -515,7 +513,7 @@ static int parse_face(void)
                 // TODO: Should rollback the failed vertices..
                 zWarning("Failed to add one more vertices while processing face on line %u in "
                     "\"%s\".", line_count, filename);
-                return 0;
+                return FALSE;
             }
 
             // Copy the last vertex to face_*[1] so that it will be used to form any additional
@@ -534,10 +532,10 @@ static int parse_face(void)
 
         format_picked = 0;
         zWarning("Not enough vertices to form triangle on line %u in \"%s\".", line_count, filename);
-        return 0;
+        return FALSE;
     }
 
-    return 1;
+    return TRUE;
 }
 
 
@@ -860,9 +858,9 @@ static void parse_usemtl(void)
 
 
 
-// Transform the vertex/index data in groups into a single array in mesh. Returns 1 on success or 0
-// if an error occurs. After this function completes it is guaranteed that the group vertex/index
-// buffers are freed.
+// Transform the vertex/index data in groups into a single array in mesh. Returns TRUE on success,
+// or else FALSE. After this function completes it is guaranteed that the group vertex/index buffers
+// are freed.
 static int transform_groups_to_mesh(void)
 {
     unsigned int i, j;
@@ -919,7 +917,7 @@ static int transform_groups_to_mesh(void)
         free(groups[i].vertices);
         free(groups[i].indices);
     }
-    return 1;
+    return TRUE;
 
 error_cleanup:
 
@@ -934,7 +932,7 @@ error_cleanup:
         free(groups[i].vertices);
         free(groups[i].indices);
     }
-    return 0;
+    return FALSE;
 }
 
 

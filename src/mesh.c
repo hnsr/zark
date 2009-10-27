@@ -559,8 +559,8 @@ void zDrawMesh(ZMesh *mesh)
 
 
 // Checks wether either vertex or index buffer needs to be resized. After successfully calling this
-// function (i.e. it returns 1) it is guaranteed that one more vertex or index can be added to the
-// buffer.
+// function (i.e. it returns TRUE) it is guaranteed that one more vertex or index can be added to
+// the buffer. Returns FALSE on failure, else TRUE.
 int zGrowMeshBuffers(ZMesh *mesh, int type)
 {
     assert(mesh);
@@ -579,7 +579,7 @@ int zGrowMeshBuffers(ZMesh *mesh, int type)
 
             if (!tmp) {
                 zWarning("Failed to allocate memory for mesh vertex buffer.");
-                return 0;
+                return FALSE;
             }
 
             mesh->vertices = tmp;
@@ -597,7 +597,7 @@ int zGrowMeshBuffers(ZMesh *mesh, int type)
 
             if (!tmp) {
                 zWarning("Failed to allocate memory for mesh index buffer.");
-                return 0;
+                return FALSE;
             }
 
             mesh->indices = tmp;
@@ -608,7 +608,7 @@ int zGrowMeshBuffers(ZMesh *mesh, int type)
         assert(0 && "Invalid buffer type given.");
     }
 
-    return 1;
+    return TRUE;
 }
 
 

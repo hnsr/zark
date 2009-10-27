@@ -377,16 +377,16 @@ unsigned int zHashString(const char *str, int tablesize)
 
 
 
-// Return true if the first character in str is not a control character.
+// Returns TRUE if the first character in str is not a control character, else FALSE.
 int zUTF8IsPrintable(const char *str)
 {
     if (str && *str != '\0') {
         if ( !( (unsigned char) *str < 0x20 || (unsigned char) *str == 0x7f ) ) {
-            return 1;
+            return TRUE;
         }
         //zDebug("%s: str was nonprintable, first char is %d", __func__, (char) *str);
     }
-    return 0;
+    return FALSE;
 }
 
 

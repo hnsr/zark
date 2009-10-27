@@ -127,21 +127,22 @@ void zRendererDeinit(void)
 
 
 
-// Check wether if we have the right OpenGL version and extensions.
+// Check wether if we have the right OpenGL version and extensions, in which case TRUE is returned,
+// else FALSE.
 int zCheckOpenGLSupport(void)
 {
     // FIXME: Should probably check for OpenGL 2.0 or maybe 2.1 now that I am using shaders?
     if (!GLEW_VERSION_1_4) {
         zError("OpenGL 1.4 is not supported");
-        return 0;
+        return FALSE;
     }
 
     if (!GLEW_ARB_vertex_buffer_object) {
         zError("ARB_vertex_buffer_object is not supported.");
-        return 0;
+        return FALSE;
     }
 
-    return 1;
+    return TRUE;
 }
 
 

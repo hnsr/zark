@@ -44,8 +44,8 @@ ZMaterial default_material = {
 
 
 // Add material to hash table. If a material already exists with the same name as the given one,
-// nothing is added and 0 returned (1 otherwise). If succesful, the caller should not free() or
-// modify mat after a succesful call, if unsuccesful, caller should make sure to clean up (i.e.
+// nothing is added and FALSE returned (TRUE otherwise). If succesful, the caller should not free()
+// or modify mat after a succesful call, if unsuccesful, caller should make sure to clean up (i.e.
 // free() mat) after itself.
 static int zAddMaterial(ZMaterial *mat)
 {
@@ -57,14 +57,14 @@ static int zAddMaterial(ZMaterial *mat)
     if (zLookupMaterial(mat->name)) {
         zWarning("%s: Material \"%s\" already exists.", __func__,
             mat->name);
-        return 0;
+        return FALSE;
     }
 
     i = zHashString(mat->name, Z_MTL_HASH_SIZE);
     mat->next = materials[i];
     materials[i] = mat;
 
-    return 1;
+    return TRUE;
 }
 
 

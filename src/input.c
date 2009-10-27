@@ -46,8 +46,8 @@ ZTextInputCallback text_input_cb;
 
 
 // Make sure there is enough room for inserting a string of len bytes (excluding null-terminator)
-// in textbuf, resize if neccesary. Returns 1 if it fits, or 0 if resizing failed for whatever
-// reason.
+// in textbuf, resize if neccesary. Returns TRUE if it fits, or FALSE if resizing failed for
+// whatever reason.
 static int zGrowTextBuffer(ZTextBuffer *textbuf, unsigned int bytes)
 {
     size_t reqsize;
@@ -73,7 +73,7 @@ static int zGrowTextBuffer(ZTextBuffer *textbuf, unsigned int bytes)
         tmp_shadow  = realloc(textbuf->buf_shadow, reqsize);
 
     } else {
-        return 1;
+        return TRUE;
     }
 
     // If any allocation failed, leave textbuf as is and return false.
@@ -82,7 +82,7 @@ static int zGrowTextBuffer(ZTextBuffer *textbuf, unsigned int bytes)
         free(tmp);
         free(tmp_shadow);
         zError("Failed to allocate memory for text buffer.");
-        return 0;
+        return FALSE;
     }
 
     textbuf->bufsize    = reqsize;
@@ -91,7 +91,7 @@ static int zGrowTextBuffer(ZTextBuffer *textbuf, unsigned int bytes)
 
     if (init) textbuf->buf[0] = '\0'; // Must null-terminate buffer on initial alloc.
 
-    return 1;
+    return TRUE;
 }
 
 

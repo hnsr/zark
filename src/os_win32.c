@@ -549,7 +549,7 @@ float zGetTimeMS(void)
 
     if (!base) {
         base = timeGetTime();
-        return 0;
+        return 0.0f;
     }
 
     return (float) (timeGetTime() - base);

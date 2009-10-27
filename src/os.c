@@ -647,7 +647,7 @@ static int zInitGLXExt(Display *display)
 
     if ( False == glXQueryExtension(display, NULL, NULL) ) {
         zError("GLX not supported.");
-        return 0;
+        return FALSE;
     } else {
 
         glXQueryVersion(display, &version_major, &version_minor);
@@ -655,11 +655,11 @@ static int zInitGLXExt(Display *display)
         if ( !((version_major == 1 && version_minor >= 1) || version_major > 2 ) ) {
             zError("Incompatible GLX version (1.1+ required, %d.%d found).", version_major,
                 version_minor);
-            return 0;
+            return FALSE;
         }
     }
 
-    return 1;
+    return TRUE;
 }
 
 
@@ -692,7 +692,7 @@ static int zSetupIM(void)
     // Open the input method.
     if ( !(im = XOpenIM(dpy, NULL, NULL, NULL)) ) {
         zError("Failed to open X input method.");
-        return 0;
+        return FALSE;
     }
 
     // Check that im supports (XIMPreeditNothing | XIMStatusNothing) im-style.
@@ -715,7 +715,7 @@ static int zSetupIM(void)
     if (!imstyle_supported) {
         zError("Input method style is not supported.");
         XCloseIM(im);
-        return 0;
+        return FALSE;
     }
 
 
@@ -723,7 +723,7 @@ static int zSetupIM(void)
     if ( !(ic = XCreateIC(im, XNInputStyle, my_style, XNClientWindow, wnd, NULL)) ) {
         zError("Failed to create input context.");
         XCloseIM(im);
-        return 0;
+        return FALSE;
     }
 
 
@@ -733,7 +733,7 @@ static int zSetupIM(void)
     else
         XSelectInput(dpy, wnd, default_event_mask | im_event_mask);
 
-    return 1;
+    return TRUE;
 }
 
 
@@ -1021,7 +1021,7 @@ int zPathExists(const char *path)
             return Z_EXISTS_DIR;
     }
 
-    return 0;
+    return FALSE;
 }
 
 

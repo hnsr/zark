@@ -163,6 +163,7 @@ void zLuaWarning(lua_State *L, int level, const char *msg, ...)
 
 
 // The zLuaGetData* functions are for easily getting values from a table (at the top of the stack).
+// They return TRUE if a value was read, else FALSE.
 
 // Get a string from data table. Bufsize is the size of the buffer pointed to by dest, which is
 // where the string is copied into (bufsize should include room for the terminating null byte).
@@ -171,7 +172,7 @@ void zLuaWarning(lua_State *L, int level, const char *msg, ...)
 // null-terminated).
 int zLuaGetDataString(lua_State *L, const char *key, char *dest, size_t bufsize)
 {
-    int res = 0;
+    int res = FALSE;
     const char *name;
 
     // Push key on the stack and get the corresponding value.
@@ -182,7 +183,7 @@ int zLuaGetDataString(lua_State *L, const char *key, char *dest, size_t bufsize)
     if (name && strlen(name)) {
         strncpy(dest, name, bufsize);
         dest[bufsize-1] = '\0';
-        res = 1;
+        res = TRUE;
     }
 
     // Pop value from the stack.
@@ -194,7 +195,7 @@ int zLuaGetDataString(lua_State *L, const char *key, char *dest, size_t bufsize)
 // length of string (excluding trailing NUL byte) is returned in *len.
 int zLuaGetDataStringA(lua_State *L, const char *key, char **dest, size_t *len)
 {
-    int res = 0;
+    int res = FALSE;
     const char *str;
     char *copy;
 
@@ -209,7 +210,7 @@ int zLuaGetDataStringA(lua_State *L, const char *key, char **dest, size_t *len)
 
             if (len) *len = strlen(copy);
             *dest = copy;
-            res = 1;
+            res = TRUE;
 
         } else {
             zWarning("%s: Failed to duplicate string.", __func__);
@@ -229,7 +230,7 @@ int zLuaGetDataStringA(lua_State *L, const char *key, char **dest, size_t *len)
 // bit flags of up to 1<<31.
 int zLuaGetDataUint(lua_State *L, const char *key, unsigned int *dest)
 {
-    int res = 0;
+    int res = FALSE;
     unsigned int flags = 0;
 
     // Get the table member.
@@ -244,7 +245,7 @@ int zLuaGetDataUint(lua_State *L, const char *key, unsigned int *dest)
         if ( lua_isnumber(L, -1) ) {
 
             *dest = (unsigned int) lua_tonumber(L, -1);
-            res = 1;
+            res = TRUE;
 
         // If it's a table, or its members into flags.
         } else if (lua_istable(L, -1)) {
@@ -254,7 +255,7 @@ int zLuaGetDataUint(lua_State *L, const char *key, unsigned int *dest)
             while (lua_next(L, -2)) { // Takes key from stack, then pushes key+value (or nothing on
                                       // table end) on the stack.
                 if (lua_isnumber(L, -1)) { // XXX: Warn when not a number?
-                    res = 1;
+                    res = TRUE;
                     flags |= (unsigned int) lua_tonumber(L, -1);
                 }
                 lua_pop(L, 1); // Pop value from the stack, leaving the key for the loop.
@@ -298,7 +299,7 @@ int zLuaGetDataUchar(lua_State *L, const char *key, unsigned char *dest)
 // floats at all could be read, then nothing is written and 0 is returned.
 int zLuaGetDataFloats(lua_State *L, const char *key, float *dest, int count)
 {
-    int res = 0, orig_count = count;
+    int res = FALSE, orig_count = count;
 
     lua_pushstring(L, key);
     lua_gettable(L, -2);
@@ -311,7 +312,7 @@ int zLuaGetDataFloats(lua_State *L, const char *key, float *dest, int count)
 
             dest[0] = (float) lua_tonumber(L, -1);
             count--;
-            res = 1;
+            res = TRUE;
 
         } else if (lua_istable(L, -1)) {
 
@@ -327,7 +328,7 @@ int zLuaGetDataFloats(lua_State *L, const char *key, float *dest, int count)
                     else
                         dest[orig_count-count] = 0.0f;
 
-                    res = 1;
+                    res = TRUE;
                     count--;
                 }
                 lua_pop(L, 1);

@@ -226,20 +226,20 @@ static int get_purpose(const char *name)
 
 
 
-// Read type/purpose from line into ply_header. Returns 0 on any error or 1 otherwise.
+// Read type/purpose from line into ply_header. Returns FALSE on any error, or TRUE otherwise.
 static int parse_property(void)
 {
     // Make sure I don't exceed limits.
     if ( !ply_header.num_elemlists ) {
         zWarning("Malformed header - property without element on line %u while parsing \"%s\".",
             line_count, filename);
-        return 0;
+        return FALSE;
     }
 
     if ( PLY_CURELEM.num_props >= PLY_MAX_PROPS ) {
         zWarning("Exceeded maximum number of properties support on line %u while parsing \"%s\".",
             line_count, filename);
-        return 0;
+        return FALSE;
     }
 
 
@@ -249,7 +249,7 @@ static int parse_property(void)
     // Parse primary type.
     parse_token();
     if ( !(PLY_CURPROP.type = get_type(token)) )
-        return 0;
+        return FALSE;
 
     // If this was a list I need to parse two more types (for list-length and list-element).
     if (PLY_CURPROP.type == PLY_TYPE_LIST) {
@@ -260,15 +260,15 @@ static int parse_property(void)
 
         if ( !PLY_CURPROP.list_length_type ||
              !PLY_CURPROP.list_member_type)
-            return 0;
+            return FALSE;
     }
 
     // And finally the purpose
     parse_token();
     if ( !(PLY_CURPROP.purpose = get_purpose(token)) )
-        return 0;
+        return FALSE;
 
-    return 1;
+    return TRUE;
 }
 
 
@@ -286,7 +286,7 @@ static int get_elemtype(const char *name)
 
 
 
-// Parse PLY header. Returns 0 on error, 1 on success. If this function fails, ply_header is
+// Parse PLY header. Returns FALSE on error, TRUE on success. If this function fails, ply_header is
 // may be useless and parsing should be aborted.
 static int parse_header(FILE* fd)
 {
@@ -306,7 +306,7 @@ static int parse_header(FILE* fd)
                 if (ply_header.num_elemlists >= PLY_MAX_ELEMLISTS) {
                     zWarning("Exceeded maximum number of element lists supported on line %u while"
                         " parsing \"%s\".", line_count, filename);
-                    return 0;
+                    return FALSE;
                 }
 
                 ply_header.num_elemlists++;
@@ -320,7 +320,7 @@ static int parse_header(FILE* fd)
                 if (!parse_property()) {
                     zWarning("Failed to parse property on line %u while parsing \"%s\".",
                         line_count, filename);
-                    return 0;
+                    return FALSE;
                 }
 
             } else if (strcmp("end_header", token) == 0) {
@@ -332,13 +332,13 @@ static int parse_header(FILE* fd)
                 // header if it is malformed in some way..
                 zWarning("Header contains unrecognized keyword \"%s\" on line %u while parsing"
                     " \"%s\".", token, line_count, filename);
-                return 0;
+                return FALSE;
             }
         }
     }
 
     ply_header.size = (unsigned int) ftell(fd);
-    return 1;
+    return TRUE;
 }
 
 
