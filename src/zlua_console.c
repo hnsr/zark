@@ -335,8 +335,6 @@ static int zConsoleLoadScene(lua_State *L)
     if ((scene = zLoadScene(name)))
         scene->camera = cam;
 
-    // FIXME: Camera doesn't seem to update properly after loading scene
-
     return 0;
 }
 
@@ -357,6 +355,16 @@ static int zConsoleAddMesh(lua_State *L)
         zAddMeshToScene(scene, name, 1);
     else
         zAddMeshToScene(scene, name, 0);
+
+    return 0;
+}
+
+
+static int zConsoleRunScript(lua_State *L)
+{
+    const char *name = luaL_checkstring(L, 1);
+
+    zLuaRunFile(Z_VM_CONSOLE, name);
 
     return 0;
 }
@@ -684,6 +692,7 @@ ZLuaConsoleFunc console_funcs[] = {
     { "mtlinfo",         zConsoleMtlInfo,         "Prints details on a material.",              "name (string)" },
     { "loadscene",       zConsoleLoadScene,       "Loads a new scene.",                         "name (string)" },
     { "addmesh",         zConsoleAddMesh,         "Adds a mesh to the scene.",                  "filename (string), is_sky (number, optional)" },
+    { "runscript",       zConsoleRunScript,       "Run a console script.",                      "filename (string)" },
     { "echo",            zConsoleEcho,            "Echoes back a message.",                     "message (string)" },
     { "quit",            zConsoleQuit,            "Quit " PACKAGE_NAME ".",                     NULL },
     { "resetcamera",     zConsoleResetCamera,     "Resets camera orientation.",                 NULL },
