@@ -39,7 +39,7 @@ const char *zVariableType(ZVariableType type)
         default: break;
     }
 
-    assert( NULL && "Invalid variable type given");
+    assert(NULL && "Invalid variable type given");
 
     return "invalid";
 }
@@ -207,7 +207,8 @@ static int zParseVariables(const char *filename, const char *prefix, int flags)
     zPrint("Loading variables from \"%s\".\n", path);
 
     // Create state, expose base library and zLuaSet.
-    assert(L = luaL_newstate());
+    L = luaL_newstate();
+    assert(L);
     lua_pushcfunction(L, luaopen_base);
     lua_call(L, 0, 0);
     lua_register(L, "set", zLuaSet);
