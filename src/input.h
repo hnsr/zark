@@ -67,6 +67,10 @@ extern unsigned int numkeybindings;
 #define Z_CONTROL_FORWARD    (1 << 9)
 #define Z_CONTROL_BACK       (1 << 10)
 #define Z_CONTROL_ZOOM       (1 << 11)
+#define Z_CONTROL_ROLL       (1 << 12)
+#define Z_CONTROL_ROLL_LEFT  (1 << 13)
+#define Z_CONTROL_ROLL_RIGHT (1 << 14)
+
 
 // ZController - Maintains controller states and motions for objects under user control.
 typedef struct ZController

@@ -148,6 +148,31 @@ static void zImpulseMove(ZImpulseArg arg, unsigned int state)
 }
 
 
+static void zImpulseRoll(ZImpulseArg arg, unsigned int state)
+{
+    unsigned int flags = controller.update_flags;
+
+    if (state) {
+        if (arg == Z_IMPARG_NONE) {
+            zEnableMouse();
+            flags |= Z_CONTROL_ROLL;
+        }
+        else if (arg == Z_IMPARG_LEFT)  flags |= Z_CONTROL_ROLL_LEFT;
+        else if (arg == Z_IMPARG_RIGHT) flags |= Z_CONTROL_ROLL_RIGHT;
+
+    } else {
+        if (arg == Z_IMPARG_NONE) {
+            zDisableMouse();
+            flags &= ~Z_CONTROL_ROLL;
+        }
+        else if (arg == Z_IMPARG_LEFT)  flags &= ~Z_CONTROL_ROLL_LEFT;
+        else if (arg == Z_IMPARG_RIGHT) flags &= ~Z_CONTROL_ROLL_RIGHT;
+    }
+
+    controller.update_flags = flags;
+}
+
+
 static void zImpulseQuit(ZImpulseArg arg, unsigned int state)
 {
     text_input = running = 0;
@@ -177,6 +202,9 @@ ZImpulse impulses[] = {
     {"MOVE_DOWN",    0, zImpulseMove,        Z_IMPARG_DOWN,    "Move down"          },
     {"MOVE_FORWARD", 0, zImpulseMove,        Z_IMPARG_FORWARD, "Move forward"       },
     {"MOVE_BACK",    0, zImpulseMove,        Z_IMPARG_BACK,    "Move back"          },
+    {"ROLL",         0, zImpulseRoll,        Z_IMPARG_NONE,    "Roll with mouse"    },
+    {"ROLL_LEFT",    0, zImpulseRoll,        Z_IMPARG_LEFT,    "Roll left"          },
+    {"ROLL_RIGHT",   0, zImpulseRoll,        Z_IMPARG_RIGHT,   "Roll right"         },
     {"QUIT",         1, zImpulseQuit,        Z_IMPARG_NONE,    "Exit " PACKAGE_NAME },
     {"TEXTCONSOLE",  1, zImpulseTextConsole, Z_IMPARG_NONE,    "Open text console " },
     {NULL, 0, NULL, 0, NULL}

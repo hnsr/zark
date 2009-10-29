@@ -12,7 +12,7 @@ typedef struct ZCamera
 
     float fov;
 
-    float view_transform[16];
+    float rotation[16];
 
 } ZCamera;
 
@@ -25,9 +25,13 @@ void zCameraSetForward(ZCamera *camera, float x, float y, float z);
 
 void zCameraSetUp(ZCamera *camera, float x, float y, float z);
 
+
 void zCameraYaw(ZCamera *camera, float angle);
 
 void zCameraPitch(ZCamera *camera, float angle);
+
+void zCameraRoll(ZCamera *camera, float angle);
+
 
 void zCameraUpdate(ZCamera *camera, float tdelta);
 
