@@ -12,6 +12,8 @@ typedef struct ZCamera
 
     float fov;
 
+    int rotation_changed;
+
     float rotation[16];
 
 } ZCamera;
@@ -37,7 +39,7 @@ void zCameraUpdate(ZCamera *camera, float tdelta);
 
 void zCameraApplyProjection(ZCamera *camera);
 
-void zCameraApplyViewing(ZCamera *camera, int rotate_only);
+void zCameraApplyViewing(ZCamera *camera, int skip_translate);
 
 
 #endif

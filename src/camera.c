@@ -17,6 +17,11 @@ static void zCameraUpdateRotation(ZCamera *cam)
     GLfloat *m = cam->rotation;
     ZVec3 right, back;
 
+    // FIXME: without this the vectors get borked after a number of transforms... maybe
+    // orthogonalize instead? anyway this seems to work for now...
+    zNormalize3(&cam->up);
+    zNormalize3(&cam->forward);
+
     // The camera position can be used to derive the translation by inverting it (since the position
     // as-is would be the World->Camera translation, while I need the Camera->World transform).
     //
@@ -40,18 +45,22 @@ static void zCameraUpdateRotation(ZCamera *cam)
 }
 
 
-// Rotate one or two (if v2 is not NULL) vectors about another vector..
+// Rotate vectors v1 and v2 (if not NULL) about another vector (vrot) by 'angle' degrees.
 static void zRotateVAV(ZVec3 *v1, ZVec3 *v2, ZVec3 *vrot, float angle)
 {
-    // For a truly arbritary axis:      For an axis on plane y=0:
-    // ( tx^2+c txy-sz txz+sy )         ( tx^2+c  -sz     txz )
-    // | txy+sz ty^2+c tyz-sx |         |     sz    c     -sx |
-    // ( txz-sy tyz+sx tz^2+c )         (    txz   sx  tz^2+c )
+    // First, construct a rotation matrix from the rotation vector and angle:
     //
-    // (x,y,z) = axis of rotation
-    // c       = cos(r)
-    // s       = sin(r)
-    // t       = 1 - cos(r)
+    //   For a truly arbritary axis:      For an axis on plane y=0:
+    //   ( tx^2+c txy-sz txz+sy )         ( tx^2+c  -sz     txz )
+    //   | txy+sz ty^2+c tyz-sx |         |     sz    c     -sx |
+    //   ( txz-sy tyz+sx tz^2+c )         (    txz   sx  tz^2+c )
+    //
+    //   (x,y,z) = axis of rotation
+    //   c       = cos(r)
+    //   s       = sin(r)
+    //   t       = 1 - cos(r)
+    //
+    // Then just transform both vectors by this matrix.
 
     float m[9], c, s, t, x, y, z;
     float r = DEG_TO_RAD(angle);
@@ -83,7 +92,7 @@ void zCameraInit(ZCamera *camera)
     zCameraSetForward(camera, 0.0f, 0.0f, -1.0f);
     zCameraSetUp(camera, 0.0f, 1.0f, 0.0f);
     camera->fov = 60.0f;
-    zCameraUpdateRotation(camera);
+    camera->rotation_changed = TRUE;
 }
 
 
@@ -104,8 +113,8 @@ void zCameraSetForward(ZCamera *camera, float x, float y, float z)
     camera->forward.x = x;
     camera->forward.y = y;
     camera->forward.z = z;
-    zNormalize3(&(camera->forward));
-    zCameraUpdateRotation(camera);
+    zNormalize3(&camera->forward);
+    camera->rotation_changed = TRUE;
 }
 
 
@@ -116,8 +125,8 @@ void zCameraSetUp(ZCamera *camera, float x, float y, float z)
     camera->up.x = x;
     camera->up.y = y;
     camera->up.z = z;
-    zNormalize3(&(camera->up));
-    zCameraUpdateRotation(camera);
+    zNormalize3(&camera->up);
+    camera->rotation_changed = TRUE;
 }
 
 
@@ -126,7 +135,7 @@ void zCameraSetUp(ZCamera *camera, float x, float y, float z)
 void zCameraYaw(ZCamera *camera, float angle)
 {
     zRotateVAV(&camera->forward, NULL, &camera->up, -angle);
-    zCameraUpdateRotation(camera);
+    camera->rotation_changed = TRUE;
 }
 
 
@@ -136,7 +145,7 @@ void zCameraPitch(ZCamera *camera, float angle)
 {
     ZVec3 right = zCross3(&camera->forward, &camera->up);
     zRotateVAV(&camera->up, &camera->forward, &right, angle);
-    zCameraUpdateRotation(camera);
+    camera->rotation_changed = TRUE;
 }
 
 
@@ -144,7 +153,7 @@ void zCameraPitch(ZCamera *camera, float angle)
 void zCameraRoll(ZCamera *camera, float angle)
 {
     zRotateVAV(&camera->up, NULL, &camera->forward, angle);
-    zCameraUpdateRotation(camera);
+    camera->rotation_changed = TRUE;
 }
 
 
@@ -153,7 +162,7 @@ void zCameraUpdate(ZCamera *camera, float tdelta)
 {
     unsigned int flags = controller.update_flags;
 
-    // Only update if a flags flag has been set,
+    // Only update if a controller flag is set,
     if (flags) {
 
         float tmp;
@@ -163,7 +172,7 @@ void zCameraUpdate(ZCamera *camera, float tdelta)
         if (tdelta > 0.0f) {
 
             ZVec3 disp;
-            ZVec3 left = zCross3(&(camera->up), &(camera->forward));
+            ZVec3 left = zCross3(&camera->up, &camera->forward);
 
             // Keep adding the camera's right/forward vectors to disp, then normalize and add to
             // position at the end.
@@ -182,12 +191,13 @@ void zCameraUpdate(ZCamera *camera, float tdelta)
             if (zLength3(&disp) > 1.0f) zNormalize3(&disp);
 
             zScaleVec3(&disp, tdelta*movespeed);
-            zAddVec3(&(camera->position), &disp);
+            zAddVec3(&camera->position, &disp);
 
             if (flags & Z_CONTROL_AIM_UP)    zCameraPitch(camera, 90.0f*tdelta);
             if (flags & Z_CONTROL_AIM_DOWN)  zCameraPitch(camera, -90.0f*tdelta);
             if (flags & Z_CONTROL_AIM_LEFT)  zCameraYaw(camera, -90.0f*tdelta);
             if (flags & Z_CONTROL_AIM_RIGHT) zCameraYaw(camera, 90.0f*tdelta);
+
             if (flags & Z_CONTROL_ROLL_LEFT)  zCameraRoll(camera, -90.0f*tdelta);
             if (flags & Z_CONTROL_ROLL_RIGHT) zCameraRoll(camera, 90.0f*tdelta);
         }
@@ -217,12 +227,7 @@ void zCameraUpdate(ZCamera *camera, float tdelta)
             else if ( camera->fov < 0.001f ) camera->fov = 0.001f;
         }
 
-        // FIXME: without this the vectors get borked after a number of transforms... maybe
-        // orthogonalize instead? anyway this seems to work for now...
-        zNormalize3(&(camera->up));
-        zNormalize3(&(camera->forward));
-
-        zCameraUpdateRotation(camera);
+        camera->rotation_changed = TRUE;
     }
 }
 
@@ -245,17 +250,25 @@ void zCameraApplyProjection(ZCamera *camera)
 
 
 // Apply camera viewing matrix.
-void zCameraApplyViewing(ZCamera *cam, int rotate_only)
+void zCameraApplyViewing(ZCamera *cam, int skip_translate)
 {
     glLoadIdentity();
 
+    // See if the forward/up vectors were changed, in which case I need to update the rotation
+    // matrix.
+    if (cam->rotation_changed) {
+        zCameraUpdateRotation(cam);
+        cam->rotation_changed = FALSE;
+    }
+
     // I need to translate first, and then rotate, but since OpenGL post-multiplies, I specify in
     // reverse order.
+
     // Rotate
     glMultMatrixf(cam->rotation);
 
     // Translate
-    if (!rotate_only) glTranslatef(-(cam->position.x), -(cam->position.y), -(cam->position.z));
+    if (!skip_translate) glTranslatef(-(cam->position.x), -(cam->position.y), -(cam->position.z));
 }
 
 
