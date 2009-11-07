@@ -27,12 +27,9 @@ static int console_enabled;
 static ATOM wndclass_atom;
 
 // Window rectangle, this is updated when the window is resized, moved, and opened. It is used by
-// the mouse input code.
+// only the mouse input code (so it knows where to warp the mouse pointer).
 static RECT window_rect;
 
-
-//#define WINDOW_STYLE (WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU)
-#define WINDOW_STYLE (WS_OVERLAPPEDWINDOW | WS_SYSMENU)
 
 
 // Get the modifier mask. I need to call GetKeyState for this, not sure how reliable this is
@@ -375,10 +372,8 @@ void zDisableMouse(void)
     mouse_stack--;
 
     if (mouse_stack < 1) {
-
         // Restore mouse position.
         SetCursorPos(m_old_x, m_old_y);
-
         ShowCursor(TRUE);
         mouse_active = 0;
     }
@@ -413,6 +408,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
         break;
 
     case WM_SIZE:
+
         // Only call reshape if we are done setting up the window for OpenGL.
         if (window_active) {
             viewport_width = LOWORD(lparam);
@@ -599,15 +595,96 @@ void zProcessEvents(void)
 
 
 
+// Attempts to set the configured display mode and returns the dimensions of resulting display mode
+// (so a window of the right size can be created). Returns TRUE on success, else FALSE. If the
+// configured mode can't be set it will try to fallback a minimal mode.
+static int zSetDisplayMode(int *screen_width, int *screen_height)
+{
+    DEVMODE dm;
+
+    // Try to directly set configured mode first.
+    dm.dmSize        = sizeof(DEVMODE);
+    dm.dmDriverExtra = 0;
+    dm.dmPelsWidth   = r_screenwidth;
+    dm.dmPelsHeight  = r_screenheight;
+    dm.dmFields      = DM_PELSWIDTH | DM_PELSHEIGHT;
+
+    if (r_screenrefresh > 0) {
+        dm.dmDisplayFrequency = r_screenrefresh;
+        dm.dmFields |= DM_DISPLAYFREQUENCY;
+    }
+
+    if (ChangeDisplaySettings(&dm, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL) {
+        *screen_width  = r_screenwidth;
+        *screen_height = r_screenheight;
+        return TRUE;
+    } else {
+
+        int i = 0;
+
+        // Setting the configured mode failed, fall back to minimal display mode
+        zWarning("Failed to set the configured display mode, falling back to minimal mode.");
+        memset(&dm, 0, sizeof(DEVMODE));
+        dm.dmSize = sizeof(DEVMODE);
+        dm.dmDriverExtra = 0;
+
+#define MIN_WIDTH   800
+#define MIN_HEIGHT  600
+#define MIN_REFRESH 60
+#define MIN_BPP     32 // 16 bpp modes make it impossible to alt-tab to desktop..
+
+        // Find a reasonable mode that satisfies some basic constraints.
+        while (EnumDisplaySettings(NULL, i++, &dm)) {
+
+            if (r_windebug) {
+                zDebug("devmode %d has width %d, height %d, refresh %d, bpp %d, flags %x", i,
+                    dm.dmPelsWidth, dm.dmPelsHeight, dm.dmDisplayFrequency, dm.dmBitsPerPel,
+                    dm.dmDisplayFlags);
+            }
+
+            if (dm.dmPelsWidth        >= MIN_WIDTH   && dm.dmPelsHeight >= MIN_HEIGHT &&
+                dm.dmDisplayFrequency >= MIN_REFRESH && dm.dmBitsPerPel >= MIN_BPP) {
+
+                if (ChangeDisplaySettings(&dm, CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL) {
+
+                    *screen_width  = dm.dmPelsWidth;
+                    *screen_height = dm.dmPelsHeight;
+
+                    // Also update the configuration I guess..
+                    r_screenwidth   = dm.dmPelsWidth;
+                    r_screenheight  = dm.dmPelsHeight;
+                    r_screenrefresh = dm.dmDisplayFrequency;
+
+                    if (r_windebug) zDebug("Fell back to mode %d", i);
+
+                    return TRUE;
+                }
+            }
+        }
+        zError("Failed to fall back to minimal display mode.");
+    }
+
+    return FALSE;
+}
+
+
+
+#define WINDOW_STYLE       (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX)
+#define WINDOW_STYLE_FS    (WS_POPUP|WS_VISIBLE|WS_SYSMENU)
+#define EX_WINDOW_STYLE    (0)
+#define EX_WINDOW_STYLE_FS (0)
+
 // Open an OpenGL-enabled window.
-void zOpenWindow(int width, int height)
+void zOpenWindow(void)
 {
     GLenum glew_err;
     WNDCLASSEX windowClass;
     PIXELFORMATDESCRIPTOR pfd;
     RECT rect;
+    DWORD style, ex_style;
     int format;
-    int win_width, win_height;
+    int width, height; // client-area dimensions
+    int win_width, win_height; // adjusted window dimensions (includes window frame)
 
     assert(!window_active);
 
@@ -619,15 +696,29 @@ void zOpenWindow(int width, int height)
     windowClass.hInstance     = app_instance;
     windowClass.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
     windowClass.hCursor       = LoadCursor(NULL, IDC_ARROW);
-    windowClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    windowClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
     windowClass.lpszMenuName  = NULL;
     windowClass.lpszClassName = TEXT("MainWindow");
     windowClass.hIconSm       = LoadIcon(NULL, IDI_WINLOGO);
 
     if ( !(wndclass_atom = RegisterClassEx(&windowClass)) ) {
-
         zError("Failed to register window class.");
         goto zOpenWindow_0;
+    }
+
+    if (r_fullscreen) {
+        style = WINDOW_STYLE_FS;
+        ex_style = EX_WINDOW_STYLE_FS;
+
+        if (!zSetDisplayMode(&width, &height)) {
+            zError("Failed to set display mode.");
+            goto zOpenWindow_0;
+        }
+    } else {
+        style = WINDOW_STYLE;
+        ex_style = EX_WINDOW_STYLE;
+        width = r_winwidth;
+        height = r_winheight;
     }
 
     // Calculate the required window size (which includes window border) for the client-area I want.
@@ -636,16 +727,16 @@ void zOpenWindow(int width, int height)
     rect.right = width;
     rect.bottom = height;
 
-    AdjustWindowRect(&rect, WINDOW_STYLE, FALSE);
+    AdjustWindowRect(&rect, style, FALSE);
 
     win_width  = rect.right  - rect.left;
     win_height = rect.bottom - rect.top;
 
     window_handle = CreateWindowEx(
-        0,                            // Extended style
+        ex_style,                     // Extended style
         TEXT("MainWindow"),           // Class name
         TEXT(PACKAGE_STRING),         // Window name
-        WINDOW_STYLE,                 // Window style
+        style,                        // Window style
         CW_USEDEFAULT, CW_USEDEFAULT, // Window coords
         win_width, win_height,        // Dimensions
         NULL,                         // Parent handle
@@ -711,7 +802,6 @@ void zOpenWindow(int width, int height)
 
     ShowWindow(window_handle, cmd_show);
     UpdateWindow(window_handle);
-
     GetWindowRect(window_handle, &window_rect);
 
     window_active = 1;
@@ -748,6 +838,19 @@ void zCloseWindow()
     DestroyWindow(window_handle);
 
     UnregisterClass((LPCTSTR)wndclass_atom, app_instance);
+
+    // Restore display mode.
+    ChangeDisplaySettings(NULL, 0);
+}
+
+
+
+void zSetFullscreen(int state)
+{
+    // There are some issues with changing window to/from fullscreen on the fly where I can't get it
+    // to update the window borders correctly (even after calling SetWindowPos)..
+    zError("Changing fullscreen on-the-fly is not supported. Use r_fullscreen and restartvideo()"
+        " instead.");
 }
 
 

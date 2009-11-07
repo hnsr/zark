@@ -439,10 +439,17 @@ static int zConsoleSetCameraDir(lua_State *L)
 }
 
 
+static int zConsoleToggleFullscreen(lua_State *L)
+{
+    zSetFullscreen(Z_FULLSCREEN_TOGGLE);
+    return 0;
+}
+
+
 static int zConsoleRestartVideo(lua_State *L)
 {
     zCloseWindow();
-    zOpenWindow(r_winwidth, r_winheight);
+    zOpenWindow();
     return 0;
 }
 
@@ -699,6 +706,7 @@ ZLuaConsoleFunc console_funcs[] = {
     { "setcamerapos",    zConsoleSetCameraPos,    "Sets camera position.",                      "pos_x (number), pos_y (number), pos_z (number)" },
     { "setcameradir",    zConsoleSetCameraDir,    "Sets camera direction.",                     "yaw (number), pitch (number, optional)" },
     { "restartvideo",    zConsoleRestartVideo,    "Reinitializes renderer.",                    NULL },
+    { "togglefullscreen",zConsoleToggleFullscreen, "Toggle fullscreen window.",                 NULL },
     { "set",             zConsoleSet,             "Sets variable to given value.",              "varname (string), value (mixed) ..." },
     { "get",             zConsoleGet,             "Prints current value of a variable.",        "varname (string)" },
     { "increase",        zConsoleIncrease,        "Increase value of scalar variable.",         "varname (string), increment (number, optional)" },

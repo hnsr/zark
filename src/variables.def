@@ -31,8 +31,12 @@
 #endif
 
 //         name             default     [min   max]  description
-   int_var(r_winwidth,          800,      1, 99999, "Width of the " PACKAGE_NAME " window. Needs to be set before window is opened.")
-   int_var(r_winheight,         600,      1, 99999, "Height of the " PACKAGE_NAME " window. Needs to be set before window is opened.")
+   int_var(r_fullscreen,          0,      0,     1, "Set this to use a fullscreen window.")
+   int_var(r_screenwidth,       800,      1, 99999, "Screen width in fullscreen mode.")
+   int_var(r_screenheight,      600,      1, 99999, "Screen height in fullscreen mode.")
+   int_var(r_screenrefresh,       0,      0,   999, "Screen refresh rate in fullscreen mode. Set to 0 to use default.")
+   int_var(r_winwidth,          800,      1, 99999, "Window width in windowed mode.")
+   int_var(r_winheight,         600,      1, 99999, "Window height in windowed mode.")
    int_var(r_swapinterval,        0,      0, 99999, "Buffer swap interval (0 = vsync off, 1 = vsync on).")
    int_var(r_depthbuffer,         1,      0,     1, "Create OpenGL visual with depth buffer if set to 1.")
    int_var(r_stencilbuffer,       1,      0,     1, "Create OpenGL visual with stencil buffer if set to 1.")
@@ -55,6 +59,7 @@
    int_var(r_drawvertices,        0,      0,     1, "Draw vertices if set to 1.")
    int_var(r_drawtangents,        0,      0,     1, "Draw tangent vectors if set to 1.")
    int_var(r_drawnormals,         0,      0,     1, "Draw normal vectors if set to 1.")
+   int_var(r_windebug,            0,      0,     1, "Debug window creation/display mode setting.")
    int_var(in_debug,              0,      0,     1, "Debug keyboard/mouse events.")
  float_var(m_sensitivity,         1,      0,   100, "Mouse sensitivity factor.")
    int_var(fs_printdiskload,      0,      0,     1, "Debug loading of resources.")

@@ -748,7 +748,42 @@ static void zCloseIM(void)
 
 
 
-void zOpenWindow(int width, int height)
+void zSetFullscreen(int state)
+{
+    XEvent ev;
+    Atom atom_state, atom_state_fs;
+    int newstate;
+
+    assert(window_active);
+
+    if (state == Z_FULLSCREEN_TOGGLE)
+        newstate = 2;
+    else if (state == Z_FULLSCREEN_ON)
+        newstate = 1;
+    else
+        newstate = 0;
+
+    // Make window full screen if desired, using WM spec (see
+    // http://freedesktop.org/wiki/Specifications/wm-spec)
+    atom_state    = XInternAtom(dpy, "_NET_WM_STATE", False);
+    atom_state_fs = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+    memset(&ev, 0, sizeof(ev));
+
+    ev.type = ClientMessage;
+    ev.xclient.window = wnd;
+    ev.xclient.message_type = atom_state;
+    ev.xclient.format = 32;
+    ev.xclient.data.l[0] = newstate;
+    ev.xclient.data.l[1] = atom_state_fs;
+    ev.xclient.data.l[2] = 0;
+
+    XSendEvent(dpy, DefaultRootWindow(dpy), False, SubstructureNotifyMask, &ev);
+    XSync(dpy, False);
+}
+
+
+
+void zOpenWindow(void)
 {
     GLenum glew_err;
     XVisualInfo *visinfo = NULL;
@@ -815,7 +850,7 @@ void zOpenWindow(int width, int height)
     winattribs.event_mask = default_event_mask;
     winmask = CWColormap | CWEventMask;
 
-    wnd = XCreateWindow(dpy, root, 0, 0, width, height, 0, visinfo->depth, InputOutput,
+    wnd = XCreateWindow(dpy, root, 0, 0, r_winwidth, r_winheight, 0, visinfo->depth, InputOutput,
         visinfo->visual, winmask, &winattribs);
 
     XStoreName(dpy, wnd, PACKAGE_STRING);
@@ -853,8 +888,10 @@ void zOpenWindow(int width, int height)
     }
 
     window_active = 1;
-    viewport_width = width;
-    viewport_height = height;
+    viewport_width = r_winwidth;
+    viewport_height = r_winheight;
+
+    if (r_fullscreen) zSetFullscreen(Z_FULLSCREEN_ON);
 
     zRendererInit();
 

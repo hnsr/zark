@@ -6,6 +6,10 @@
 #define Z_EXISTS_REGULAR 1
 #define Z_EXISTS_DIR     2
 
+#define Z_FULLSCREEN_ON     1
+#define Z_FULLSCREEN_OFF    2
+#define Z_FULLSCREEN_TOGGLE 3
+
 // Attempt to sleep for nsecs nanoseconds. Nothing is guaranteed.
 void zSleep(float ms);
 
@@ -13,10 +17,13 @@ void zSleep(float ms);
 float zGetTimeMS(void);
 
 // Open a window.
-void zOpenWindow(int width, int height);
+void zOpenWindow(void);
 
 // Close our window.
 void zCloseWindow(void);
+
+// Set window fullscreen depending on state (see Z_FULLSCREEN_*).
+void zSetFullscreen(int state);
 
 // Enable/disable text input, only call after a window has been opened.
 void zEnableTextInput(ZTextInputCallback cb);

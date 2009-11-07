@@ -74,7 +74,7 @@ int zMain(int argc, char** argv)
 
     zLuaRunFile(Z_VM_CONSOLE, Z_FILE_STARTUP);
 
-    zOpenWindow(r_winwidth, r_winheight);
+    zOpenWindow();
 
     while (running) {
 
