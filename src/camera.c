@@ -236,14 +236,19 @@ void zCameraUpdate(ZCamera *camera, float tdelta)
 // Apply camera projection matrix.
 void zCameraApplyProjection(ZCamera *camera)
 {
+	float ratio;
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
 
-    //ratio = (float) viewport_width / (float) viewport_height;
+	if (r_aspectratio > 0.0009765625)
+		ratio = r_aspectratio;
+	else
+		ratio = (float) viewport_width / (float) viewport_height;
+
     //glOrtho(-1.0*ratio, 1.0*ratio, -1.0, 1.0, 0.1, 100.0);
-    gluPerspective(camera->fov, (float) viewport_width / (float) viewport_height,
-        r_nearplane, r_farplane);
+    gluPerspective(camera->fov, ratio, r_nearplane, r_farplane);
     glMatrixMode(GL_MODELVIEW);
 }
 
