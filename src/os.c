@@ -15,6 +15,7 @@
 #include <sys/time.h>  // gettimeofday
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
+#include <X11/extensions/Xrandr.h>
 #include <GL/glew.h>
 #include <dirent.h> // opendir etc.
 
@@ -62,14 +63,16 @@
 //#define NO_REPEAT
 
 static Display *dpy;
+static int screen;
 static Window wnd, root;
 static XIM im;
 static XIC ic;
 static Atom atom_wmdelete;
 static GLXContext context;
-static int screen;
 static int window_active; // Indicates if an OpenGL-enabled windows has been opened.
 static int mouse_active;  // Indicates if we're reading mouse motion.
+static int mode_changed;
+
 
 // Default event mask for the window. Needed in zOpenWindow, and in zSetupIM to augment event mask
 // with those the IM requires.
@@ -783,6 +786,146 @@ void zSetFullscreen(int state)
 
 
 
+static XRRScreenConfiguration *xrr_config = NULL;
+static SizeID   old_size     = -1;
+static Rotation old_rotation = 0;
+static short    old_rate     = 0;
+
+// Attempt to set the configured display mode (resolution, refresh)
+static void zSetVideoMode(void)
+{
+    int vmajor, vminor;
+    int i, j, num_sizes = 0, num_rates = 0;
+    XRRScreenSize *sizes;
+    short *rates;
+    SizeID picked_size = -1;
+    short picked_rate = -1;
+    Time xrr_last_changed, ignore;
+
+    // This cose is really cumbersome, but with the XRandr docs being what they are I'm unsure how
+    // to trim it down :(
+
+    if (!XRRQueryVersion(dpy, &vmajor, &vminor)) {
+        zWarning("XRandr not supported, not setting display mode.");
+        return;
+    }
+    if (r_windebug) zDebug("Got XRandr extension version %d.%d", vmajor, vminor);
+
+    // Figure out current configuration, so that I can restore it later.
+    if ( !(xrr_config = XRRGetScreenInfo(dpy, wnd)) ) {
+        zError("Failed to figure out current display configuration, not changing display mode.");
+        return;
+    }
+
+    sizes = XRRConfigSizes(xrr_config, &num_sizes);
+    if (!(sizes && num_sizes)) {
+        zError("Failed to retrieve screen sizes, not changing display mode.");
+        XRRFreeScreenConfigInfo(xrr_config);
+        xrr_config = NULL;
+        return;
+    }
+    old_size = XRRConfigCurrentConfiguration(xrr_config, &old_rotation);
+    old_rate = XRRConfigCurrentRate(xrr_config);
+    xrr_last_changed = XRRConfigTimes(xrr_config, &ignore);
+
+    if (r_windebug) {
+        zDebug("Got %d sizes:", num_sizes);
+        for (i = 0; i < num_sizes; i++)
+            zDebug("  size %d: %dx%d", i, sizes[i].width, sizes[i].height);
+        zDebug("Current display mode: size %d, rotation %d, rate %d", old_size, old_rotation,
+            old_rate);
+    }
+
+    // Validate the configured screen size and refresh rate.
+    for (i = 0; i < num_sizes; i++) {
+
+        if (sizes[i].width == r_screenwidth && sizes[i].height == r_screenheight) {
+
+            short fallback_rate = -1;
+
+            if (r_windebug)
+                zDebug("Found matching size of %d for configured size %dx%d.", i, r_screenwidth,
+                    r_screenheight);
+
+            picked_size = i;
+
+            // Now see if configued rate is valid. If it isn't, use fallback_rate (which will be the
+            // largest rate listed for the selected size).
+            rates = XRRConfigRates(xrr_config, picked_size, &num_rates);
+            for (j = 0; j < num_rates; j++) {
+
+                if (r_windebug) zDebug("Considering rate %d for size %d.", rates[j], picked_size);
+
+                // IF the configured rate is invalid, I need to have some valid rate for the picked
+                // size to fall back to ..
+                if (rates[j] > fallback_rate) fallback_rate = rates[j];
+
+                if (rates[j] == r_screenrefresh) {
+                    if (r_windebug) zDebug("Configured screen refresh rate %d is valid.", rates[j]);
+                    picked_rate = rates[j];
+                    break;
+                }
+            }
+            // If nothing no rate was picked at this point, use fallback_rate instead.
+            if (picked_rate == -1) {
+                if (r_windebug) zDebug("Configured rate not valid, falling back to %d.",
+                    fallback_rate);
+                picked_rate = fallback_rate;
+            }
+            break;
+        }
+    }
+    if (!picked_size) {
+        zError("Failed to set configured screen resolution, using current display mode.");
+        XRRFreeScreenConfigInfo(xrr_config);
+        xrr_config = NULL;
+        return;
+    }
+
+    // And finaly set the mode...
+    if (!XRRSetScreenConfigAndRate(dpy, xrr_config, wnd, picked_size, old_rotation, picked_rate,
+            xrr_last_changed)) {
+        if (r_windebug) zDebug("Succesfully changed display mode.");
+        mode_changed = 1;
+    } else {
+        zError("Failed to set display mode.");
+        XRRFreeScreenConfigInfo(xrr_config);
+        xrr_config = NULL;
+    }
+}
+
+
+
+// Restore display mode if it was changed.
+static void zRestoreVideoMode(void)
+{
+    assert(window_active); // Yeah, I actually need the window to still exist when calling
+                           // XRRSetScreenConfigAndRate...
+
+    // Restore old mode if it was changed.
+    if (mode_changed) {
+
+        Time xrr_last_changed, ignore;
+
+        // Not sure if this belongs here or if I should make it global like the old_* vars..
+        xrr_last_changed = XRRConfigTimes(xrr_config, &ignore);
+
+        if (!XRRSetScreenConfigAndRate(dpy, xrr_config, wnd, old_size, old_rotation, old_rate,
+                xrr_last_changed)) {
+            if (r_windebug) zDebug("Succesfully restored display mode.");
+        } else {
+            zError("Failed to restore display mode.");
+        }
+
+        mode_changed = 0;
+        XRRFreeScreenConfigInfo(xrr_config);
+        xrr_config = NULL;
+    }
+    assert(!xrr_config);
+}
+
+
+
 void zOpenWindow(void)
 {
     GLenum glew_err;
@@ -848,7 +991,8 @@ void zOpenWindow(void)
 
     winattribs.colormap = XCreateColormap(dpy, root, visinfo->visual, AllocNone);
     winattribs.event_mask = default_event_mask;
-    winmask = CWColormap | CWEventMask;
+    winattribs.override_redirect = False; // Set to true do disable WM for this window.
+    winmask = CWColormap | CWEventMask | CWOverrideRedirect;
 
     wnd = XCreateWindow(dpy, root, 0, 0, r_winwidth, r_winheight, 0, visinfo->depth, InputOutput,
         visinfo->visual, winmask, &winattribs);
@@ -888,10 +1032,17 @@ void zOpenWindow(void)
     }
 
     window_active = 1;
+
+    // Going fullscreen later on will cause a ConfigureNotify event, so it's okay to just set it
+    // like this here..
     viewport_width = r_winwidth;
     viewport_height = r_winheight;
 
-    if (r_fullscreen) zSetFullscreen(Z_FULLSCREEN_ON);
+
+    if (r_fullscreen) {
+        zSetVideoMode();
+        zSetFullscreen(Z_FULLSCREEN_ON);
+    }
 
     zRendererInit();
 
@@ -944,6 +1095,7 @@ void zCloseWindow()
 
     glXMakeCurrent(dpy, None, NULL);
     glXDestroyContext(dpy, context);
+    zRestoreVideoMode();
     XDestroyWindow(dpy, wnd);
     XCloseDisplay(dpy);
     window_active = 0;

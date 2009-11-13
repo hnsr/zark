@@ -36,6 +36,9 @@ PKG_CHECK_MODULES(lua, [lua5.1], [],
 
 PKG_CHECK_MODULES(ftgl, [ftgl > 2.1.2]) dnl Must be 2.1.3 or newer for ftgl.h
 
+PKG_CHECK_MODULES(xrandr, xrandr)
+AC_CHECK_HEADER([X11/extensions/Xrandr.h], [], [AC_MSG_ERROR(X11/extensions/Xrandr.h not found)])
+
 AC_CHECK_HEADER([GL/glew.h], [], [AC_MSG_ERROR(GL/glew.h not found, make sure glew is installed)])
 AC_CHECK_HEADER([GL/glxew.h], [], [AC_MSG_ERROR(GL/glxew.h not found, make sure glew is installed)])
 AC_CHECK_LIB([GLEW], [main], [], [AC_MSG_ERROR([libGLEW not found, make sure glew is installed])])
@@ -47,8 +50,8 @@ AC_CHECK_HEADER([IL/ilu.h], [], [AC_MSG_ERROR(IL/ilu.h not found, make sure DevI
 AC_CHECK_LIB([ILU], [main], [], [AC_MSG_ERROR([libILU not found, make sure DevIL is installed])])
 
 
-CFLAGS="$CFLAGS $x11_CFLAGS $ftgl_CFLAGS $lua_CFLAGS"
-LIBS="$LIBS $x11_LIBS $ftgl_LIBS $lua_LIBS"
+CFLAGS="$CFLAGS $x11_CFLAGS $ftgl_CFLAGS $lua_CFLAGS $xrandr_CFLAGS"
+LIBS="$LIBS $x11_LIBS $ftgl_LIBS $lua_LIBS $xrandr_LIBS"
 
 
 
