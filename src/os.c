@@ -767,7 +767,12 @@ void zSetFullscreen(int state)
         newstate = 0;
 
     // Make window full screen if desired, using WM spec (see
-    // http://freedesktop.org/wiki/Specifications/wm-spec)
+    // http://freedesktop.org/wiki/Specifications/wm-spec). This method doesn't work with vidmode,
+    // since that only changes the 'viewport' size, which 'scrolls' across the virtual screen, a
+    // fullscreen window would then be larger than the viewport... To make going fullscreen work
+    // with setting the video mode like that I would need to manually size my window the match the
+    // viewport size, and somehow grab or constrain the mouse cursor to prevent scrolling.
+    // Fortunately I will just use xrandr to set the video mode, so I don't need any of that.
     atom_state    = XInternAtom(dpy, "_NET_WM_STATE", False);
     atom_state_fs = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
     memset(&ev, 0, sizeof(ev));
@@ -785,7 +790,7 @@ void zSetFullscreen(int state)
 }
 
 
-
+// FIXME: This uses the old Xrandr 1.0/1.1 API and totally borks a multi-monitor configuration..
 static XRRScreenConfiguration *xrr_config = NULL;
 static SizeID   old_size     = -1;
 static Rotation old_rotation = 0;
