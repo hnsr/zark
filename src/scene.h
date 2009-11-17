@@ -15,6 +15,7 @@
 
 #define Z_MAX_LIGHTS 8 // XXX: Should probably check max lights supported by OpenGL instead.
 
+// Posable types
 #define Z_POSABLE_STATICMESH 1
 
 
@@ -43,6 +44,7 @@ typedef struct ZPosable
 
 typedef struct ZLight
 {
+    // TODO: I should add some attenuation parameters..
     float position[4];
     float ambient_color[4];
     float diffuse_color[4];

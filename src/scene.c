@@ -272,12 +272,11 @@ void zDeleteScene(ZScene *scene)
         scene->posables = pos_tmp;
     }
 
-    // TODO: Turn off the lights! :p
-
-    // TODO: Nuke all resources. It would be best if I can find a way to delete only those
-    // meshes/textures/etc that are not references by the new scene, but implementing that is
-    // probably more trouble than it's worth (i'd probably have to do that in a seperate function,
-    // i.e. 'zChangeScene').
+    // FIXME: I should unload all resources at this point, to not end up wasting memory after
+    // switching scenes, but I'll not bother implementing that until I decide how to properly manage
+    // resources. Ideally I would just do some refcounting on the loaded resources and
+    // garbage collect them, in which case everything is taken care of automatically and I don't
+    // have to do anything here..
 
     free(scene);
 }
