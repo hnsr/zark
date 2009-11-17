@@ -791,6 +791,7 @@ void zSetFullscreen(int state)
 
 
 // FIXME: This uses the old Xrandr 1.0/1.1 API and totally borks a multi-monitor configuration..
+#ifdef XRANDR_OLD
 static XRRScreenConfiguration *xrr_config = NULL;
 static SizeID   old_size     = -1;
 static Rotation old_rotation = 0;
@@ -928,7 +929,20 @@ static void zRestoreVideoMode(void)
     }
     assert(!xrr_config);
 }
+#else // !XRANDR_OLD
 
+// Save the current display configuration and set a different videomode for the display our current
+// window is on.
+static void zSetVideoMode(void)
+{
+}
+
+// Restore preveously saved display configuration if the video mode was changed.
+static void zRestoreVideoMode(void)
+{
+}
+
+#endif
 
 
 void zOpenWindow(void)
