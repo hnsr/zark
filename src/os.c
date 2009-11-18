@@ -72,6 +72,8 @@ static GLXContext context;
 static int window_active; // Indicates if an OpenGL-enabled windows has been opened.
 static int mouse_active;  // Indicates if we're reading mouse motion.
 static int mode_changed;
+static int randr_event_base;
+static int randr_error_base;
 
 
 // Default event mask for the window. Needed in zOpenWindow, and in zSetupIM to augment event mask
@@ -615,6 +617,18 @@ void zProcessEvents(void)
                 zReshapeViewport();
             }
             break;
+
+        default:
+
+            if (event.type == randr_event_base+RRScreenChangeNotify) {
+
+                zDebug("RRScreenChangeNotify", event.type);
+
+            } else if (event.type == randr_event_base+RRNotify) {
+
+                zDebug("RRNotify", event.type);
+            }
+            break;
         }
     }
 
@@ -790,8 +804,10 @@ void zSetFullscreen(int state)
 }
 
 
-// FIXME: This uses the old Xrandr 1.0/1.1 API and totally borks a multi-monitor configuration..
-#ifdef XRANDR_OLD
+
+// FIXME: This uses the old Xrandr <1.2 API and totally borks a multi-monitor configuration.. I
+// could reuse this code as a fallback maybe, since it does work well for single output setups.
+#if 0
 static XRRScreenConfiguration *xrr_config = NULL;
 static SizeID   old_size     = -1;
 static Rotation old_rotation = 0;
@@ -929,20 +945,77 @@ static void zRestoreVideoMode(void)
     }
     assert(!xrr_config);
 }
-#else // !XRANDR_OLD
+#endif
 
-// Save the current display configuration and set a different videomode for the display our current
+
+
+// The xrandr code here attempts to temporarily switch the display (on which the Zark window
+// resides) to the requested display mode, and restore the previous configuration on exit. To
+// simplify things a little, if another client modifies the display configuration after I changed it
+// to the requested display mode, I won't bother to restore anything on exit and assume the user
+// knows what he or she is doing. This isn't entirely fool-proof since another client may be trying
+// to set a temporary display mode after I do, but I'm not sure how I can make that work nicely..
+
+// Actually this may not be the best way to go about it, since the window manager may move my
+// fullscreen window to a different display when the display it is on currently is unplugged..
+
+
+// Returns TRUE if Xrandr 1.2 or higher is supported, else FASLE.
+static int zXrandrSupported(void)
+{
+    int vmajor, vminor;
+    Status status;
+
+    static int checked = FALSE;
+    static int supported = FALSE;
+
+    if (checked) return supported;
+
+    if ( !(status = XRRQueryVersion(dpy, &vmajor, &vminor)) ) {
+
+        zError("Failed to query Xrandr version (return status %d).", status);
+
+    } else if ( vmajor < 1 || (vmajor < 2 && vminor < 2) ) {
+
+        zError("Unable to change display mode, your version of xrandr is too old: found %d.%d,"
+            " need 1.2 or higher.", vmajor, vminor);
+
+    } else {
+
+        if (r_windebug)
+            zDebug("Found Xrandr version %d.%d.", vmajor, vminor);
+
+        if (XRRQueryExtension(dpy, &randr_event_base, &randr_error_base)) {
+            supported = TRUE;
+        } else
+            zError("Failed to query Xrandr event/error base values.");
+    }
+
+    checked = TRUE;
+    return supported;
+}
+
+
+
+// Save the current display configuration and set a different display mode for the display that our
 // window is on.
 static void zSetVideoMode(void)
 {
+    assert(window_active);
+
+    if (!zXrandrSupported()) return;
+
+    // Save the current configuration.
 }
 
 // Restore preveously saved display configuration if the video mode was changed.
 static void zRestoreVideoMode(void)
 {
+    assert(window_active);
+
+    if (!zXrandrSupported()) return;
 }
 
-#endif
 
 
 void zOpenWindow(void)
@@ -1016,12 +1089,18 @@ void zOpenWindow(void)
     wnd = XCreateWindow(dpy, root, 0, 0, r_winwidth, r_winheight, 0, visinfo->depth, InputOutput,
         visinfo->visual, winmask, &winattribs);
 
+    if (zXrandrSupported()) {
+        XRRSelectInput(dpy, wnd, RRScreenChangeNotifyMask | RRCrtcChangeNotifyMask |
+                                 RROutputChangeNotifyMask | RROutputPropertyNotifyMask );
+    }
+
     XStoreName(dpy, wnd, PACKAGE_STRING);
 
     // Let the window manager know we want to be notified when user closes window.
     atom_wmdelete = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(dpy, wnd, &atom_wmdelete, 1);
 
+    // Create GL context.
     context = glXCreateContext(dpy, visinfo, NULL, True);
 
     if (NULL == context) {

@@ -61,7 +61,7 @@ int zMain(int argc, char** argv)
 {
     float frame_time;
 
-    zPrint("%s starting up...\n", PACKAGE_STRING);
+    zPrint("\n%s starting up...\n", PACKAGE_STRING);
 
     ilInit();
     iluInit();
