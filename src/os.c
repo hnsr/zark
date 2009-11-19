@@ -988,6 +988,8 @@ static void zHandleXrandrEvent(XEvent *xev, int type)
     }
 }
 
+
+
 // Returns TRUE if Xrandr 1.2 or higher is supported (and initializes some things the first time it
 // is called), else FALSE.
 static int zXrandrSupported(void)
@@ -998,27 +1000,27 @@ static int zXrandrSupported(void)
     static int checked = FALSE;
     static int supported = FALSE;
 
-    if (checked) return supported;
+    if (checked)
+        return supported;
 
-    if ( !(status = XRRQueryVersion(dpy, &vmajor, &vminor)) ) {
+    if (XRRQueryExtension(dpy, &randr_event_base, &randr_error_base)) {
 
-        zError("Failed to query Xrandr version (return status %d).", status);
+        if ( (status = XRRQueryVersion(dpy, &vmajor, &vminor)) ) {
 
-    } else if ( vmajor < 1 || (vmajor < 2 && vminor < 2) ) {
+            if ( vmajor < 1 || (vmajor < 2 && vminor < 2) ) {
+                zError("Unable to change display mode, your version of xrandr is too old: found"
+                    " %d.%d, need 1.2 or higher.", vmajor, vminor);
+            } else {
+                supported = TRUE;
+            }
 
-        zError("Unable to change display mode, your version of xrandr is too old: found %d.%d,"
-            " need 1.2 or higher.", vmajor, vminor);
+            if (r_windebug) zDebug("Found Xrandr version %d.%d.", vmajor, vminor);
 
+        } else {
+            zError("Failed to query Xrandr version (return status %d).", status);
+        }
     } else {
-
-        if (r_windebug)
-            zDebug("Found Xrandr version %d.%d.", vmajor, vminor);
-
-        // Get the event and error offsets.
-        if (XRRQueryExtension(dpy, &randr_event_base, &randr_error_base)) {
-            supported = TRUE;
-        } else
-            zError("Failed to query Xrandr event/error base values.");
+        zError("Xrandr extension is not supported, not setting display mode.");
     }
 
     checked = TRUE;
@@ -1037,6 +1039,8 @@ static void zSetVideoMode(void)
 
     // Save the current configuration.
 }
+
+
 
 // Restore preveously saved display configuration if the video mode was changed.
 static void zRestoreVideoMode(void)
