@@ -75,6 +75,8 @@ static int mode_changed;
 static int randr_event_base;
 static int randr_error_base;
 
+static void zHandleXrandrEvent(XEvent *ev, int type);
+
 
 // Default event mask for the window. Needed in zOpenWindow, and in zSetupIM to augment event mask
 // with those the IM requires.
@@ -618,15 +620,21 @@ void zProcessEvents(void)
             }
             break;
 
+        // I don't handle these, but I don't really want 'unknown event' messages for them. I should
+        // probably stop rendering or limit the framerate if the window is unmapped however..
+        // (and for that matter probably on FocusOut too)
+        case MapNotify:
+        case UnmapNotify:
+        case ReparentNotify:
+            break;
+
         default:
-
-            if (event.type == randr_event_base+RRScreenChangeNotify) {
-
-                zDebug("RRScreenChangeNotify", event.type);
-
-            } else if (event.type == randr_event_base+RRNotify) {
-
-                zDebug("RRNotify", event.type);
+            // Handle some extension events (just Xrandr at the moment).
+            if (event.type == randr_event_base+RRScreenChangeNotify ||
+                event.type == randr_event_base+RRNotify ) {
+                zHandleXrandrEvent(&event, event.type - randr_event_base);
+            } else {
+                if (r_windebug) zDebug("Unknown X event, type = %d.", event.type);
             }
             break;
         }
@@ -960,7 +968,28 @@ static void zRestoreVideoMode(void)
 // fullscreen window to a different display when the display it is on currently is unplugged..
 
 
-// Returns TRUE if Xrandr 1.2 or higher is supported, else FASLE.
+// Handle xrandr events, not sure what actually need to be handled here.. yet
+static void zHandleXrandrEvent(XEvent *xev, int type)
+{
+    XRRScreenChangeNotifyEvent *scnev;
+    XRRNotifyEvent *nev;
+
+    switch (type) {
+
+        case RRScreenChangeNotify:
+            zDebug("XRRScreenChangeNotifyEvent.");
+            scnev = (XRRScreenChangeNotifyEvent *) xev;
+            break;
+
+        case RRNotify:
+            zDebug("XRRNotifyEvent.");
+            nev = (XRRNotifyEvent *) xev;
+            break;
+    }
+}
+
+// Returns TRUE if Xrandr 1.2 or higher is supported (and initializes some things the first time it
+// is called), else FALSE.
 static int zXrandrSupported(void)
 {
     int vmajor, vminor;
@@ -985,6 +1014,7 @@ static int zXrandrSupported(void)
         if (r_windebug)
             zDebug("Found Xrandr version %d.%d.", vmajor, vminor);
 
+        // Get the event and error offsets.
         if (XRRQueryExtension(dpy, &randr_event_base, &randr_error_base)) {
             supported = TRUE;
         } else
