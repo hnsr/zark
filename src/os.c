@@ -76,6 +76,7 @@ static int randr_event_base;
 static int randr_error_base;
 
 static void zHandleXrandrEvent(XEvent *ev, int type);
+static int zXrandrSupported(void);
 
 
 // Default event mask for the window. Needed in zOpenWindow, and in zSetupIM to augment event mask
@@ -629,13 +630,19 @@ void zProcessEvents(void)
             break;
 
         default:
+
             // Handle some extension events (just Xrandr at the moment).
-            if (event.type == randr_event_base+RRScreenChangeNotify ||
-                event.type == randr_event_base+RRNotify ) {
-                zHandleXrandrEvent(&event, event.type - randr_event_base);
-            } else {
-                if (r_windebug) zDebug("Unknown X event, type = %d.", event.type);
+            if ( zXrandrSupported() ) {
+                if (event.type == randr_event_base+RRScreenChangeNotify ||
+                    event.type == randr_event_base+RRNotify) {
+                    zHandleXrandrEvent(&event, event.type - randr_event_base);
+                    break;
+                }
             }
+
+            if (r_windebug)
+               zDebug("Unknown X event, type = %d.", event.type);
+
             break;
         }
     }
@@ -968,24 +975,101 @@ static void zRestoreVideoMode(void)
 // fullscreen window to a different display when the display it is on currently is unplugged..
 
 
-// Handle xrandr events, not sure what actually need to be handled here.. yet
-static void zHandleXrandrEvent(XEvent *xev, int type)
+// Dump the entire Xrandr configuration.
+static void zDumpXrandrConfig(void)
 {
-    XRRScreenChangeNotifyEvent *scnev;
-    XRRNotifyEvent *nev;
+    int min_width, min_height, max_width, max_height;
+    XRRScreenResources *res = NULL;
 
-    switch (type) {
-
-        case RRScreenChangeNotify:
-            zDebug("XRRScreenChangeNotifyEvent.");
-            scnev = (XRRScreenChangeNotifyEvent *) xev;
-            break;
-
-        case RRNotify:
-            zDebug("XRRNotifyEvent.");
-            nev = (XRRNotifyEvent *) xev;
-            break;
+    if ( XRRGetScreenSizeRange(dpy, wnd, &min_width, &min_height, &max_width, &max_height) ) {
+        zDebug("XRRGetScreenSizeRange: min = %dx%d, max = %dx%d",
+            min_width, min_height, max_width, max_height);
+        zDebug("");
+    } else {
+        zError("XRRGetScreenSizeRange failed.");
     }
+
+    if ( (res = XRRGetScreenResources(dpy,wnd)) ) {
+
+        int i, j;
+
+        zDebug("screen resources:");
+        zDebug("  timestamp       = %d", res->timestamp);
+        zDebug("  configTimestamp = %d", res->configTimestamp);
+        zDebug("");
+
+        // Print crtcs.
+        for (i = 0; i < res->ncrtc; i++) {
+            XRRCrtcInfo *crtc = NULL;
+            crtc = XRRGetCrtcInfo(dpy, res, res->crtcs[i]);
+            assert(crtc);
+            zDebug("  crtc %d:", res->crtcs[i]);
+            zDebug("    timestamp = %d",     crtc->timestamp);
+            zDebug("    x, y      = %d, %d", crtc->x, crtc->y);
+            zDebug("    w, h      = %d, %d", crtc->width, crtc->height);
+            zDebug("    mode      = %d",     crtc->mode);
+            zDebug("    rotation  = %hd",    crtc->rotation);
+            zDebug("    rotations = %hd",    crtc->rotations);
+            zDebug("    outputs:");
+            for (j = 0; j < crtc->noutput; j++)
+                zDebug("      %d", crtc->outputs[j]);
+            zDebug("    possible outputs:");
+            for (j = 0; j < crtc->npossible; j++)
+                zDebug("      %d", crtc->possible[j]);
+            XRRFreeCrtcInfo(crtc);
+            zDebug("");
+        }
+        zDebug("");
+
+        // Print outputs.
+        for (i = 0; i < res->noutput; i++) {
+            XRROutputInfo *output = NULL;
+            output = XRRGetOutputInfo(dpy, res, res->outputs[i]);
+            assert(output);
+            zDebug("  output %d:",       res->outputs[i]);
+            zDebug("    timestamp      = %d",  output->timestamp);
+            zDebug("    crtc           = %d",  output->crtc);
+            zDebug("    name           = %s",  output->name);
+            zDebug("    mm_width       = %d",  output->mm_width);
+            zDebug("    mm_height      = %d",  output->mm_height);
+            zDebug("    connection     = %hd", output->connection);
+            zDebug("    subpixel_order = %hd", output->subpixel_order);
+            zDebug("    npreferred     = %d",  output->npreferred);
+            zDebug("    crtcs:");
+            for (j = 0; j < output->ncrtc; j++)
+                zDebug("      %d", output->crtcs[j]);
+            zDebug("    clone outputs:");
+            for (j = 0; j < output->nclone; j++)
+                zDebug("      %d", output->clones[j]);
+            zDebug("    modes:");
+            for (j = 0; j < output->nmode; j++)
+                zDebug("      %d", output->modes[j]);
+            zDebug("");
+            XRRFreeOutputInfo(output);
+        }
+        zDebug("");
+
+        // Print modes.
+        for (i = 0; i < res->nmode; i++) {
+
+            XRRModeInfo *mode = &res->modes[i];
+            float refresh = (float) mode->dotClock / (float) (mode->vTotal * mode->hTotal);
+
+            zDebug("  mode %3d:  %4d x %4d at %.1fHz", mode->id, mode->width, mode->height,
+                refresh);
+            /*
+            zDebug("    hSync = %d-%d",  mode->hSyncStart, mode->hSyncEnd);
+            zDebug("    hSkew = %d",     mode->hSkew);
+            zDebug("    vSync = %d-%d",  mode->vSyncStart, mode->vSyncEnd);
+            zDebug("    name  = \"%s\"", mode->name);
+            zDebug("");
+            */
+        }
+        zDebug("");
+    } else {
+        zError("XRRGetScreenSizeRange failed.");
+    }
+    XRRFreeScreenResources(res);
 }
 
 
@@ -1023,8 +1107,70 @@ static int zXrandrSupported(void)
         zError("Xrandr extension is not supported, not setting display mode.");
     }
 
+    if (supported && r_windebug)
+        zDumpXrandrConfig();
+
     checked = TRUE;
     return supported;
+}
+
+
+
+// Handle xrandr events, not sure what actually need to be handled here.. yet
+static void zHandleXrandrEvent(XEvent *xev, int type)
+{
+    // This union is to comply with C99 strict aliasing (and happens to be a convenient way to
+    // access the different event types with only a single type cast)..
+    union ZExtendedXEvent {
+        XEvent                       xev;
+        XRRScreenChangeNotifyEvent   screen;
+        XRRNotifyEvent               notify;
+        XRRCrtcChangeNotifyEvent     crtc;
+        XRROutputChangeNotifyEvent   output;
+        XRROutputPropertyNotifyEvent property;
+    } *ev = (union ZExtendedXEvent *) xev;
+
+
+    if (r_windebug) {
+        switch (type) {
+            case RRScreenChangeNotify:
+                zDebug("screen changed:");
+                zDebug("  size_index     = %hd", ev->screen.size_index);
+                zDebug("  subpixel_order = %hd", ev->screen.subpixel_order);
+                zDebug("  rotation       = %hd", ev->screen.rotation);
+                zDebug("  width          = %d",  ev->screen.width);
+                zDebug("  height         = %d",  ev->screen.height);
+                break;
+            case RRNotify:
+                switch(ev->notify.subtype) {
+                    case RRNotify_CrtcChange:
+                        zDebug("crtc %d changed:",    ev->crtc.crtc);
+                        zDebug("  mode     = %d",     ev->crtc.mode);
+                        zDebug("  rotation = %hd",    ev->crtc.rotation);
+                        zDebug("  x, y     = %d, %d", ev->crtc.x, ev->crtc.y);
+                        zDebug("  width    = %d",     ev->crtc.width);
+                        zDebug("  height   = %d",     ev->crtc.height);
+                        break;
+                    case RRNotify_OutputChange:
+                        zDebug("output %d changed:",     ev->output.output);
+                        zDebug("  crtc           = %d",  ev->output.crtc);
+                        zDebug("  mode           = %d",  ev->output.mode);
+                        zDebug("  rotation       = %hd", ev->output.rotation);
+                        zDebug("  connection     = %hd", ev->output.connection);
+                        zDebug("  subpixel_order = %hd", ev->output.subpixel_order);
+                        break;
+                    case RRNotify_OutputProperty:
+                        zDebug("output %d, prop %d changed:", ev->property.output, ev->property.property);
+                        zDebug("  timestamp = %d",            ev->property.timestamp);
+                        zDebug("  state     = %d",            ev->property.state);
+                        break;
+                    default:
+                        break;
+                }
+                break;
+        }
+        zDebug("");
+    }
 }
 
 
@@ -1033,11 +1179,14 @@ static int zXrandrSupported(void)
 // window is on.
 static void zSetVideoMode(void)
 {
+
     assert(window_active);
 
     if (!zXrandrSupported()) return;
 
-    // Save the current configuration.
+    // Save the current configuration. Or.. figure out which crtc the zark window is on, and save
+    // its configuration.
+
 }
 
 
