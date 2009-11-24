@@ -14,6 +14,13 @@ float zLength3(ZVec3 *v)
 
 
 
+float zLength2(ZVec2 *v)
+{
+    return sqrtf(v->x*v->x + v->y*v->y);
+}
+
+
+
 // Normalize vector v. Can result in NaNs, so caller must be careful about the vector it passes, if
 // it's too close to 0 things might blow up.
 void zNormalize3(ZVec3 *v)
@@ -75,6 +82,13 @@ void zSubtractVec3(ZVec3 *a, ZVec3 *b)
     a->x -= b->x;
     a->y -= b->y;
     a->z -= b->z;
+}
+
+
+void zSubtractVec2(ZVec2 *a, ZVec2 *b)
+{
+    a->x -= b->x;
+    a->y -= b->y;
 }
 
 

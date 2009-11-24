@@ -35,6 +35,7 @@ typedef struct ZVec4
 // XXX: Maybe I should turn some of these in macros or inline functions?
 
 float zLength3(ZVec3 *v);
+float zLength2(ZVec2 *v);
 
 void  zNormalize3(ZVec3 *v);
 
@@ -47,7 +48,7 @@ void  zScaleVec3(ZVec3 *v, float s);
 void  zAddVec3(ZVec3 *a, ZVec3 *b);
 
 void  zSubtractVec3(ZVec3 *a, ZVec3 *b);
-
+void  zSubtractVec2(ZVec2 *a, ZVec2 *b);
 void  zSubtractVec3r(ZVec3 *r, ZVec3 *a, ZVec3 *b);
 
 void  zTransform3Vec3(float *m, ZVec3 *v);

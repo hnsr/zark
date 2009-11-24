@@ -71,7 +71,12 @@ static Atom atom_wmdelete;
 static GLXContext context;
 static int window_active; // Indicates if an OpenGL-enabled windows has been opened.
 static int mouse_active;  // Indicates if we're reading mouse motion.
-static int mode_changed;
+
+static int restore_mode;
+static RRMode mode_old = None;
+static RRMode mode_new = None;
+static RRCrtc mode_crtc = None;
+
 static int randr_event_base;
 static int randr_error_base;
 
@@ -780,199 +785,8 @@ static void zCloseIM(void)
 
 
 
-void zSetFullscreen(int state)
-{
-    XEvent ev;
-    Atom atom_state, atom_state_fs;
-    int newstate;
-
-    assert(window_active);
-
-    if (state == Z_FULLSCREEN_TOGGLE)
-        newstate = 2;
-    else if (state == Z_FULLSCREEN_ON)
-        newstate = 1;
-    else
-        newstate = 0;
-
-    // Make window full screen if desired, using WM spec (see
-    // http://freedesktop.org/wiki/Specifications/wm-spec). This method doesn't work with vidmode,
-    // since that only changes the 'viewport' size, which 'scrolls' across the virtual screen, a
-    // fullscreen window would then be larger than the viewport... To make going fullscreen work
-    // with setting the video mode like that I would need to manually size my window the match the
-    // viewport size, and somehow grab or constrain the mouse cursor to prevent scrolling.
-    // Fortunately I will just use xrandr to set the video mode, so I don't need any of that.
-    atom_state    = XInternAtom(dpy, "_NET_WM_STATE", False);
-    atom_state_fs = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
-    memset(&ev, 0, sizeof(ev));
-
-    ev.type = ClientMessage;
-    ev.xclient.window = wnd;
-    ev.xclient.message_type = atom_state;
-    ev.xclient.format = 32;
-    ev.xclient.data.l[0] = newstate;
-    ev.xclient.data.l[1] = atom_state_fs;
-    ev.xclient.data.l[2] = 0;
-
-    XSendEvent(dpy, DefaultRootWindow(dpy), False, SubstructureNotifyMask, &ev);
-    XSync(dpy, False);
-}
-
-
-
-// FIXME: This uses the old Xrandr <1.2 API and totally borks a multi-monitor configuration.. I
-// could reuse this code as a fallback maybe, since it does work well for single output setups.
-#if 0
-static XRRScreenConfiguration *xrr_config = NULL;
-static SizeID   old_size     = -1;
-static Rotation old_rotation = 0;
-static short    old_rate     = 0;
-
-// Attempt to set the configured display mode (resolution, refresh)
-static void zSetVideoMode(void)
-{
-    int vmajor, vminor;
-    int i, j, num_sizes = 0, num_rates = 0;
-    XRRScreenSize *sizes;
-    short *rates;
-    SizeID picked_size = -1;
-    short picked_rate = -1;
-    Time xrr_last_changed, ignore;
-
-    // This cose is really cumbersome, but with the XRandr docs being what they are I'm unsure how
-    // to trim it down :(
-
-    if (!XRRQueryVersion(dpy, &vmajor, &vminor)) {
-        zWarning("XRandr not supported, not setting display mode.");
-        return;
-    }
-    if (r_windebug) zDebug("Got XRandr extension version %d.%d", vmajor, vminor);
-
-    // Figure out current configuration, so that I can restore it later.
-    if ( !(xrr_config = XRRGetScreenInfo(dpy, wnd)) ) {
-        zError("Failed to figure out current display configuration, not changing display mode.");
-        return;
-    }
-
-    sizes = XRRConfigSizes(xrr_config, &num_sizes);
-    if (!(sizes && num_sizes)) {
-        zError("Failed to retrieve screen sizes, not changing display mode.");
-        XRRFreeScreenConfigInfo(xrr_config);
-        xrr_config = NULL;
-        return;
-    }
-    old_size = XRRConfigCurrentConfiguration(xrr_config, &old_rotation);
-    old_rate = XRRConfigCurrentRate(xrr_config);
-    xrr_last_changed = XRRConfigTimes(xrr_config, &ignore);
-
-    if (r_windebug) {
-        zDebug("Got %d sizes:", num_sizes);
-        for (i = 0; i < num_sizes; i++)
-            zDebug("  size %d: %dx%d", i, sizes[i].width, sizes[i].height);
-        zDebug("Current display mode: size %d, rotation %d, rate %d", old_size, old_rotation,
-            old_rate);
-    }
-
-    // Validate the configured screen size and refresh rate.
-    for (i = 0; i < num_sizes; i++) {
-
-        if (sizes[i].width == r_screenwidth && sizes[i].height == r_screenheight) {
-
-            short fallback_rate = -1;
-
-            if (r_windebug)
-                zDebug("Found matching size of %d for configured size %dx%d.", i, r_screenwidth,
-                    r_screenheight);
-
-            picked_size = i;
-
-            // Now see if configued rate is valid. If it isn't, use fallback_rate (which will be the
-            // largest rate listed for the selected size).
-            rates = XRRConfigRates(xrr_config, picked_size, &num_rates);
-            for (j = 0; j < num_rates; j++) {
-
-                if (r_windebug) zDebug("Considering rate %d for size %d.", rates[j], picked_size);
-
-                // IF the configured rate is invalid, I need to have some valid rate for the picked
-                // size to fall back to ..
-                if (rates[j] > fallback_rate) fallback_rate = rates[j];
-
-                if (rates[j] == r_screenrefresh) {
-                    if (r_windebug) zDebug("Configured screen refresh rate %d is valid.", rates[j]);
-                    picked_rate = rates[j];
-                    break;
-                }
-            }
-            // If nothing no rate was picked at this point, use fallback_rate instead.
-            if (picked_rate == -1) {
-                if (r_windebug) zDebug("Configured rate not valid, falling back to %d.",
-                    fallback_rate);
-                picked_rate = fallback_rate;
-            }
-            break;
-        }
-    }
-    if (!picked_size) {
-        zError("Failed to set configured screen resolution, using current display mode.");
-        XRRFreeScreenConfigInfo(xrr_config);
-        xrr_config = NULL;
-        return;
-    }
-
-    // And finaly set the mode...
-    if (!XRRSetScreenConfigAndRate(dpy, xrr_config, wnd, picked_size, old_rotation, picked_rate,
-            xrr_last_changed)) {
-        if (r_windebug) zDebug("Succesfully changed display mode.");
-        mode_changed = 1;
-    } else {
-        zError("Failed to set display mode.");
-        XRRFreeScreenConfigInfo(xrr_config);
-        xrr_config = NULL;
-    }
-}
-
-
-
-// Restore display mode if it was changed.
-static void zRestoreVideoMode(void)
-{
-    assert(window_active); // Yeah, I actually need the window to still exist when calling
-                           // XRRSetScreenConfigAndRate...
-
-    // Restore old mode if it was changed.
-    if (mode_changed) {
-
-        Time xrr_last_changed, ignore;
-
-        // Not sure if this belongs here or if I should make it global like the old_* vars..
-        xrr_last_changed = XRRConfigTimes(xrr_config, &ignore);
-
-        if (!XRRSetScreenConfigAndRate(dpy, xrr_config, wnd, old_size, old_rotation, old_rate,
-                xrr_last_changed)) {
-            if (r_windebug) zDebug("Succesfully restored display mode.");
-        } else {
-            zError("Failed to restore display mode.");
-        }
-
-        mode_changed = 0;
-        XRRFreeScreenConfigInfo(xrr_config);
-        xrr_config = NULL;
-    }
-    assert(!xrr_config);
-}
-#endif
-
-
-
-// The xrandr code here attempts to temporarily switch the display (on which the Zark window
-// resides) to the requested display mode, and restore the previous configuration on exit. To
-// simplify things a little, if another client modifies the display configuration after I changed it
-// to the requested display mode, I won't bother to restore anything on exit and assume the user
-// knows what he or she is doing. This isn't entirely fool-proof since another client may be trying
-// to set a temporary display mode after I do, but I'm not sure how I can make that work nicely..
-
-// Actually this may not be the best way to go about it, since the window manager may move my
-// fullscreen window to a different display when the display it is on currently is unplugged..
+// The xrandr code here attempts to temporarily switch the CRTC (on which the Zark window resides)
+// to the configured display mode, and restore the original display mode of the CRTC on exit.
 
 
 // Dump the entire Xrandr configuration.
@@ -1057,13 +871,6 @@ static void zDumpXrandrConfig(void)
 
             zDebug("  mode %3d:  %4d x %4d at %.1fHz", mode->id, mode->width, mode->height,
                 refresh);
-            /*
-            zDebug("    hSync = %d-%d",  mode->hSyncStart, mode->hSyncEnd);
-            zDebug("    hSkew = %d",     mode->hSkew);
-            zDebug("    vSync = %d-%d",  mode->vSyncStart, mode->vSyncEnd);
-            zDebug("    name  = \"%s\"", mode->name);
-            zDebug("");
-            */
         }
         zDebug("");
     } else {
@@ -1107,7 +914,7 @@ static int zXrandrSupported(void)
         zError("Xrandr extension is not supported, not setting display mode.");
     }
 
-    if (supported && r_windebug)
+    if (r_windebug)
         zDumpXrandrConfig();
 
     checked = TRUE;
@@ -1116,7 +923,7 @@ static int zXrandrSupported(void)
 
 
 
-// Handle xrandr events, not sure what actually need to be handled here.. yet
+// Handle xrandr events.
 static void zHandleXrandrEvent(XEvent *xev, int type)
 {
     // This union is to comply with C99 strict aliasing (and happens to be a convenient way to
@@ -1131,46 +938,117 @@ static void zHandleXrandrEvent(XEvent *xev, int type)
     } *ev = (union ZExtendedXEvent *) xev;
 
 
-    if (r_windebug) {
-        switch (type) {
-            case RRScreenChangeNotify:
-                zDebug("screen changed:");
-                zDebug("  size_index     = %hd", ev->screen.size_index);
-                zDebug("  subpixel_order = %hd", ev->screen.subpixel_order);
-                zDebug("  rotation       = %hd", ev->screen.rotation);
-                zDebug("  width          = %d",  ev->screen.width);
-                zDebug("  height         = %d",  ev->screen.height);
-                break;
-            case RRNotify:
-                switch(ev->notify.subtype) {
-                    case RRNotify_CrtcChange:
-                        zDebug("crtc %d changed:",    ev->crtc.crtc);
-                        zDebug("  mode     = %d",     ev->crtc.mode);
-                        zDebug("  rotation = %hd",    ev->crtc.rotation);
-                        zDebug("  x, y     = %d, %d", ev->crtc.x, ev->crtc.y);
-                        zDebug("  width    = %d",     ev->crtc.width);
-                        zDebug("  height   = %d",     ev->crtc.height);
-                        break;
-                    case RRNotify_OutputChange:
-                        zDebug("output %d changed:",     ev->output.output);
-                        zDebug("  crtc           = %d",  ev->output.crtc);
-                        zDebug("  mode           = %d",  ev->output.mode);
-                        zDebug("  rotation       = %hd", ev->output.rotation);
-                        zDebug("  connection     = %hd", ev->output.connection);
-                        zDebug("  subpixel_order = %hd", ev->output.subpixel_order);
-                        break;
-                    case RRNotify_OutputProperty:
-                        zDebug("output %d, prop %d changed:", ev->property.output, ev->property.property);
-                        zDebug("  timestamp = %d",            ev->property.timestamp);
-                        zDebug("  state     = %d",            ev->property.state);
-                        break;
-                    default:
-                        break;
-                }
-                break;
+    // I want to skip restoring the display mode if something else touches the CRTC (that I changed
+    // the display mode for) after I changed it, but I'm not really sure how to seperate events
+    // caused by my own mode change from those events caused by subsequent mode changes from other
+    // clients.. so the best I can do is to just ignore all changes except if the mode was changed
+    // to sometihing other than the mode I changed it to..
+    if (restore_mode && type == RRNotify && ev->notify.subtype == RRNotify_CrtcChange) {
+
+        if (ev->crtc.crtc == mode_crtc && ev->crtc.mode != mode_new) {
+
+            zWarning("%s: Display mode for CRTC %d was changed to %d, not restoring it.", __func__,
+                mode_crtc, ev->crtc.mode);
+
+            restore_mode = FALSE;
+            mode_crtc    = None;
+            mode_old     = None;
+            mode_new     = None;
         }
-        zDebug("");
     }
+}
+
+
+
+// Figure out which CRTC our window is on, or is closest to.
+static RRCrtc zFindCrtcForWindow(XRRScreenResources *res)
+{
+    int i;
+    float window_distance = 1000000.0f;
+    int center_x, center_y;
+    XWindowAttributes win_attribs;
+    Window ignore_win;
+    RRCrtc window_crtc = None;
+
+    // Ideally I would work with the window manager here since it really depends on where the WM
+    // puts the window when it is made fullscreen, but I don't really know if this is possible so
+    // I'll try to determine what CRTC to use myself, and hope the WM behaves the same.
+    //
+    // NOTE: If this becomes a problem ever, an alternative strategy might be to make the window
+    // fullscreen first, then check where the WM placed it before changing the display mode. This
+    // would depend on the WM being smart enough to keep the window fullscreened after I change
+    // display mode (metacity does this at least).
+    //
+    // My method is to first check if the window center is inside the viewport of a CRTC, and simply
+    // use that CRTC if it is, else I'll use the CRTC which has the shortest distance from its
+    // center to the window's center.
+    XGetWindowAttributes(dpy, wnd, &win_attribs);
+    XTranslateCoordinates(dpy, wnd, root, 0,0, &center_x, &center_y, &ignore_win);
+    center_x += win_attribs.width / 2;
+    center_y += win_attribs.height / 2;
+
+    // Check if window center is inside any of the CRTCs.
+    for (i = 0; i < res->ncrtc; i++) {
+
+        XRRCrtcInfo *crtc = XRRGetCrtcInfo(dpy, res, res->crtcs[i]);
+        assert(crtc);
+
+        if (center_x >= crtc->x && center_x < (crtc->x + (int) crtc->width) &&
+            center_y >= crtc->y && center_y < (crtc->y + (int) crtc->height)) {
+
+            if (r_windebug) {
+                zDebug("%s: Window center (%d,%d) is inside crtc %d (pos %d,%d size %d,%d)",
+                    __func__, center_x, center_y, res->crtcs[i], crtc->x, crtc->y, crtc->width,
+                    crtc->height);
+            }
+
+            window_crtc = res->crtcs[i];
+        }
+
+        XRRFreeCrtcInfo(crtc);
+    }
+
+    // If that didn't work, check window center distance from CRTC viewport center.
+    if (window_crtc == None) {
+
+        if (r_windebug)
+            zDebug("%s: Window center not contained in any CRTC viewport, checking distance"
+                " instead.", __func__);
+
+        for (i = 0; i < res->ncrtc; i++) {
+
+            float dist;
+            XRRCrtcInfo *crtc = XRRGetCrtcInfo(dpy, res, res->crtcs[i]);
+            ZVec2 win_center = {center_x, center_y};
+            ZVec2 crtc_center;
+
+            assert(crtc);
+            crtc_center.x = crtc->x + ((int)crtc->width/2);
+            crtc_center.y = crtc->y + ((int)crtc->height/2);
+            zSubtractVec2(&win_center, &crtc_center);
+            dist = zLength2(&win_center);
+
+            if (r_windebug)
+                zDebug("%s: Distance between win_center and crtc_center for CRTC %d is %f.",
+                    __func__, res->crtcs[i], dist);
+
+            if ( dist < window_distance) {
+
+                if (r_windebug)
+                    zDebug("%s: Distance is smaller for CRTC %d than previous one.", __func__,
+                        res->crtcs[i]);
+
+                window_crtc = res->crtcs[i];
+                window_distance = dist;
+            }
+            XRRFreeCrtcInfo(crtc);
+        }
+    }
+
+    if (r_windebug)
+        zDebug("%s: Found with CRTC %d.", __func__, window_crtc);
+
+    return window_crtc;
 }
 
 
@@ -1179,14 +1057,106 @@ static void zHandleXrandrEvent(XEvent *xev, int type)
 // window is on.
 static void zSetVideoMode(void)
 {
+    XRRScreenResources *res;
+    RRCrtc picked_crtc;
+    int i, j;
 
     assert(window_active);
 
     if (!zXrandrSupported()) return;
 
-    // Save the current configuration. Or.. figure out which crtc the zark window is on, and save
-    // its configuration.
+    if ( !(res = XRRGetScreenResources(dpy,wnd)) ) {
+        zError("Failed to get Xrandr screen resources, not setting mode.");
+        return;
+    }
 
+    // NOTE: If the configured mode is larger than the initial mode there is a chance that there
+    // isn't enough virtual screen space to set the new mode, but since I can't think of a way to
+    // handle that sanely I won't even bother to check and just let Xrandr fail...
+
+    picked_crtc = zFindCrtcForWindow(res);
+
+    if ( picked_crtc != None) {
+
+        XRRCrtcInfo *crtc = XRRGetCrtcInfo(dpy, res, picked_crtc);
+        XRROutputInfo *output;
+        RRMode picked_mode = None;
+        int picked_mode_refresh = 0;
+
+        assert(crtc);
+
+        if (crtc->noutput < 1) {
+            zError("%s: CRTC has no outputs, unable to set mode.");
+            XRRFreeScreenResources(res);
+            XRRFreeCrtcInfo(crtc);
+            return;
+        }
+
+        output = XRRGetOutputInfo(dpy, res, crtc->outputs[0]);
+        assert(output);
+
+        // Find a matching mode with the highest refresh rate.
+        for (i = 0; i < res->nmode; i++) {
+
+            XRRModeInfo mode = res->modes[i];
+            int mode_refresh = ( (float) mode.dotClock / (float) (mode.hTotal*mode.vTotal) );
+
+            if ( (int) mode.width == r_screenwidth && (int) mode.height == r_screenheight &&
+                 (r_screenrefresh == 0 || r_screenrefresh == mode_refresh) ) {
+
+                if ( !picked_mode || (picked_mode && picked_mode_refresh < mode_refresh) ) {
+
+                    if (r_windebug)
+                        zDebug("Mode %d with refresh %d matched configuration, checking if output"
+                            " supports it.", mode.id, mode_refresh);
+
+                    // Actually check if the mode is supported by the CRTC's output.
+                    for (j = 0; j < output->nmode; j++ ) {
+                        if (mode.id == output->modes[j]) {
+                            if (r_windebug)
+                                zDebug("Output %d supports mode %d.", crtc->outputs[0], mode.id);
+                            picked_mode = mode.id;
+                            picked_mode_refresh = mode_refresh;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (picked_mode != None) {
+
+            Status status;
+
+            if (r_windebug)
+                zDebug("Setting mode %d on crtc %d.", picked_mode, picked_crtc);
+
+            status = XRRSetCrtcConfig(dpy, res, picked_crtc, crtc->timestamp, crtc->x, crtc->y,
+                picked_mode, crtc->rotation, crtc->outputs, crtc->noutput);
+
+            if (status == RRSetConfigSuccess) {
+
+                restore_mode = TRUE;
+                mode_old = crtc->mode;
+                mode_new = picked_mode;
+                mode_crtc = picked_crtc;
+
+                assert(crtc->mode != picked_mode);
+            } else {
+                zError("Failed to set mode, XRRSetCrtcConfig returned status %d.", status);
+            }
+
+        } else {
+            zError("Failed get a suitable display mode, not setting mode.");
+        }
+
+        XRRFreeCrtcInfo(crtc);
+        XRRFreeOutputInfo(output);
+
+    } else {
+        zError("Failed to find CRTC for window, not setting mode.");
+    }
+
+    XRRFreeScreenResources(res);
 }
 
 
@@ -1197,6 +1167,95 @@ static void zRestoreVideoMode(void)
     assert(window_active);
 
     if (!zXrandrSupported()) return;
+
+    if (restore_mode) {
+
+        XRRScreenResources *res = XRRGetScreenResources(dpy,wnd);
+        XRRCrtcInfo *crtc = NULL;
+
+        if (res)
+            crtc = XRRGetCrtcInfo(dpy, res, mode_crtc);
+
+        if (res && crtc) {
+            Status status;
+
+            status = XRRSetCrtcConfig(dpy, res, mode_crtc, crtc->timestamp, crtc->x, crtc->y,
+                mode_old, crtc->rotation, crtc->outputs, crtc->noutput);
+
+            if (status != RRSetConfigSuccess) {
+                zError("Failed to restore display mode, XRRSetCrtcConfig returned status %d.",
+                    status);
+            }
+
+        } else {
+            zError("%s: Failed to get Xrandr screen resources, unable to restore mode.", __func__);
+        }
+
+        restore_mode = FALSE;
+        mode_old     = None;
+        mode_new     = None;
+        mode_crtc    = None;
+
+        XRRFreeCrtcInfo(crtc);
+        XRRFreeScreenResources(res);
+    }
+}
+
+
+
+void zSetFullscreen(int state)
+{
+    XEvent ev;
+    Atom atom_state, atom_state_fs;
+    static int fullscreen = 0;
+
+    assert(window_active);
+
+    if (state == Z_FULLSCREEN_TOGGLE)
+        fullscreen = !fullscreen;
+    else if (state == Z_FULLSCREEN_ON)
+        fullscreen = 1;
+    else
+        fullscreen = 0;
+
+    if (fullscreen)
+        zSetVideoMode();
+    else
+        zRestoreVideoMode();
+
+    // Make window full screen if desired, using WM spec (see
+    // http://freedesktop.org/wiki/Specifications/wm-spec). Thsi method of making the window
+    // fullscreen wouldn't work if I changed the resolution using xf86vidmode, since that extension
+    // would make the display a viewport into a possibly larger virtual screen, and so the window
+    // would end up being large than the display and the user would have to use the mouse to 'pan'
+    // the viewport.. Now that I'm changing the resolution with Xrandr this works however.
+    atom_state    = XInternAtom(dpy, "_NET_WM_STATE", False);
+    atom_state_fs = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+    memset(&ev, 0, sizeof(ev));
+
+    ev.type = ClientMessage;
+    ev.xclient.window = wnd;
+    ev.xclient.message_type = atom_state;
+    ev.xclient.format = 32;
+    ev.xclient.data.l[0] = fullscreen;
+    ev.xclient.data.l[1] = atom_state_fs;
+    ev.xclient.data.l[2] = 0;
+
+    XSendEvent(dpy, DefaultRootWindow(dpy), False, SubstructureNotifyMask, &ev);
+    XSync(dpy, False);
+
+    // This ensures the window really is on top (I found that in metacity with focus-on-mouseover it
+    // sometimes isn't) and that the cursor is centered in the fullscreen window.
+    if (fullscreen) {
+
+        XWindowChanges changes;
+
+        changes.stack_mode = Above;
+
+        XConfigureWindow(dpy, wnd, CWStackMode, &changes);
+        XWarpPointer(dpy, None, wnd, 0,0,0,0, r_screenwidth/2,r_screenheight/2);
+        XSync(dpy, False);
+    }
 }
 
 
@@ -1321,7 +1380,6 @@ void zOpenWindow(void)
 
 
     if (r_fullscreen) {
-        zSetVideoMode();
         zSetFullscreen(Z_FULLSCREEN_ON);
     }
 
