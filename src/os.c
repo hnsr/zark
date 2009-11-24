@@ -1140,7 +1140,6 @@ static void zSetVideoMode(void)
                 mode_new = picked_mode;
                 mode_crtc = picked_crtc;
 
-                assert(crtc->mode != picked_mode);
             } else {
                 zError("Failed to set mode, XRRSetCrtcConfig returned status %d.", status);
             }
