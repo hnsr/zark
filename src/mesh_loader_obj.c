@@ -772,8 +772,10 @@ static void parse_mtllib(void)
                     mat->fragment_shader[0] = '\0';
                     strcat(mat->fragment_shader, token);
                 }
-            // Silently ignore a bunch of unsupported keywords:
-            } else if (strcmp("#", token) == 0);
+            }
+            // Silently ignore comments and a bunch of unsupported keywords:
+            else if (token[0] == '#'); // I should really be doing this in the tokenizer, but this
+                                       // works just as well
             else if (strcmp("illum", token) == 0);
             else if (strcmp("d", token) == 0);
             else if (strcmp("Ni", token) == 0);
