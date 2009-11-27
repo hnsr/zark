@@ -71,6 +71,7 @@ static Atom atom_wmdelete;
 static GLXContext context;
 static int window_active; // Indicates if an OpenGL-enabled windows has been opened.
 static int mouse_active;  // Indicates if we're reading mouse motion.
+static int fullscreen = 0;
 
 static int restore_mode;
 static RRMode mode_old = None;
@@ -923,7 +924,7 @@ static int zXrandrSupported(void)
 
 
 
-// Handle xrandr events.
+// Handle xrandr events. Called by my X event handler only for Xrandr events.
 static void zHandleXrandrEvent(XEvent *xev, int type)
 {
     // This union is to comply with C99 strict aliasing (and happens to be a convenient way to
@@ -937,6 +938,8 @@ static void zHandleXrandrEvent(XEvent *xev, int type)
         XRROutputPropertyNotifyEvent property;
     } *ev = (union ZExtendedXEvent *) xev;
 
+    // Not entirely sure why I need to call this, but the Xrandr man page says I should
+    XRRUpdateConfiguration(xev);
 
     // I want to skip restoring the display mode if something else touches the CRTC (that I changed
     // the display mode for) after I changed it, but I'm not really sure how to seperate events
@@ -1130,7 +1133,7 @@ static void zSetVideoMode(void)
             if (r_windebug)
                 zDebug("Setting mode %d on crtc %d.", picked_mode, picked_crtc);
 
-            status = XRRSetCrtcConfig(dpy, res, picked_crtc, crtc->timestamp, crtc->x, crtc->y,
+            status = XRRSetCrtcConfig(dpy, res, picked_crtc, CurrentTime, crtc->x, crtc->y,
                 picked_mode, crtc->rotation, crtc->outputs, crtc->noutput);
 
             if (status == RRSetConfigSuccess) {
@@ -1178,7 +1181,8 @@ static void zRestoreVideoMode(void)
         if (res && crtc) {
             Status status;
 
-            status = XRRSetCrtcConfig(dpy, res, mode_crtc, crtc->timestamp, crtc->x, crtc->y,
+            // Restore original mode for the CRTC I changed the display mode for.
+            status = XRRSetCrtcConfig(dpy, res, mode_crtc, CurrentTime, crtc->x, crtc->y,
                 mode_old, crtc->rotation, crtc->outputs, crtc->noutput);
 
             if (status != RRSetConfigSuccess) {
@@ -1206,7 +1210,6 @@ void zSetFullscreen(int state)
 {
     XEvent ev;
     Atom atom_state, atom_state_fs;
-    static int fullscreen = 0;
 
     assert(window_active);
 
@@ -1217,10 +1220,19 @@ void zSetFullscreen(int state)
     else
         fullscreen = 0;
 
-    if (fullscreen)
+    if (fullscreen) {
+
         zSetVideoMode();
-    else
+
+        // In order to prevent the mouse from getting into 'dead areas' after switching display
+        // mode, I confine it to my window. This seems only possible with XGrabPointer.
+        XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync, GrabModeAsync, wnd, None,
+            CurrentTime);
+    } else {
+
         zRestoreVideoMode();
+        XUngrabPointer(dpy, CurrentTime);
+    }
 
     // Make window full screen if desired, using WM spec (see
     // http://freedesktop.org/wiki/Specifications/wm-spec). Thsi method of making the window
@@ -1381,6 +1393,7 @@ void zOpenWindow(void)
     if (r_fullscreen) {
         zSetFullscreen(Z_FULLSCREEN_ON);
     }
+
 
     zRendererInit();
 
