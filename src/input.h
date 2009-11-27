@@ -115,6 +115,8 @@ void zUpdateTextBuffer(ZTextBuffer *textbuf, ZKeyEvent *zkev, char *str);
 
 void zResetTextBuffer(ZTextBuffer *textbuf);
 
+ZKey zKeyByName(const char *keyname);
+
 const char *zKeyName(ZKey key);
 
 const char *zKeyDesc(ZKey key);

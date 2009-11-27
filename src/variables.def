@@ -62,6 +62,7 @@
    int_var(r_drawnormals,         0,      0,     1, "Draw normal vectors if set to 1.")
    int_var(r_windebug,            0,      0,     1, "Debug window creation/display mode setting.")
    int_var(in_debug,              0,      0,     1, "Debug keyboard/mouse events.")
+string_var(in_ungrabkey, "KEY_LALT",                "If set to a key name, ungrabs input when it is held down (for things like ALT-TAB).")
  float_var(m_sensitivity,         1,      0,   100, "Mouse sensitivity factor.")
    int_var(fs_printdiskload,      0,      0,     1, "Debug loading of resources.")
    int_var(fs_nosave,             0,      0,     1, "Set this to prevent writing config/keybindings on exit.")

@@ -256,6 +256,24 @@ static ZKeyBinding *zLookupKeyBinding(const ZKeyEvent *zkev)
 
 
 
+// Return Zkey that matches given name (case-insensitive). Returns either a valid key or
+// Z_KEY_UNKNOWN. keyname should be of the form "KEY_FOO" (no "Z_" prefix).
+// WARNING: This does a dumb linear search, use with care!
+ZKey zKeyByName(const char *keyname)
+{
+    int i;
+
+    for (i = 0; i < Z_NUM_KEYS; i++) {
+        if (strcasecmp(keyname, keynames[i].name) == 0) {
+            return i;
+        }
+    }
+
+    return Z_KEY_UNKNOWN;
+}
+
+
+
 // Get the short symbolic name of key ("KEY_KP_DIVIDE").
 const char *zKeyName(ZKey key)
 {

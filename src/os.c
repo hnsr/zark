@@ -53,6 +53,11 @@
  * [2] http://www.sbin.org/doc/Xlib/chapt_11.html
  */
 
+// If defined, grabs the pointer in fullscreen mode, so that it can be confined to the window and
+// won't be able to 'get lost' in dead areas when changing display mode to a lower resolution or in
+// multi-monitor xrandr/xinerama setups.
+#define GRAB_POINTER
+
 // If defined, grabs keyboard input. This lets me recieve some key events that would otherwise be
 // intercepted by the window manager, but makes it impossible to use things like alt-tab, so it
 // probably just going to be an inconvenience.
@@ -522,6 +527,31 @@ void zProcessEvents(void)
             zkev.keystate = event.type == KeyPress ? Z_KEY_STATE_PRESS : Z_KEY_STATE_RELEASE;
             zkev.modmask = zTranslateXModMask(event.xkey.state);
 
+            #ifdef GRAB_POINTER
+            // Temporarily ungrab pointer in fullscreen mode when 'in_ungrabkey' key is down, to
+            // allow interaction with window manager.
+            {
+                static ZKey ungrab_key_set = FALSE;
+                static ZKey ungrab_key     = Z_KEY_UNKNOWN;
+
+                // Initialize (that is, lookup ZKey) if not initialized yet, or if in_ungrabkey
+                // changed.
+                if (!ungrab_key_set) {
+                    ungrab_key_set = TRUE;
+                    ungrab_key = zKeyByName(in_ungrabkey);
+                }
+
+                if (fullscreen && ungrab_key != Z_KEY_UNKNOWN) {
+                    if (zkev.key == ungrab_key && zkev.keystate == Z_KEY_STATE_PRESS) {
+                        XUngrabPointer(dpy, CurrentTime);
+                    } else if (zkev.key == ungrab_key && zkev.keystate == Z_KEY_STATE_RELEASE) {
+                        XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync,
+                            GrabModeAsync, wnd, None, CurrentTime);
+                    }
+                }
+            }
+            #endif
+
             if (text_input && event.type == KeyPress) {
 
                 static char buf[60];
@@ -596,6 +626,12 @@ void zProcessEvents(void)
             #ifdef GRAB_KEYBOARD
             // Grab xkb.
             XGrabKeyboard(dpy, wnd, False, GrabModeAsync, GrabModeAsync, CurrentTime);
+            #endif
+
+            #ifdef GRAB_POINTER
+            if (fullscreen)
+                XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync, GrabModeAsync,
+                    wnd, None, CurrentTime);
             #endif
             break;
 
@@ -1220,18 +1256,18 @@ void zSetFullscreen(int state)
     else
         fullscreen = 0;
 
+
     if (fullscreen) {
-
         zSetVideoMode();
-
-        // In order to prevent the mouse from getting into 'dead areas' after switching display
-        // mode, I confine it to my window. This seems only possible with XGrabPointer.
+        #ifdef GRAB_POINTER
         XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync, GrabModeAsync, wnd, None,
             CurrentTime);
+        #endif
     } else {
-
         zRestoreVideoMode();
+        #ifdef GRAB_POINTER
         XUngrabPointer(dpy, CurrentTime);
+        #endif
     }
 
     // Make window full screen if desired, using WM spec (see
