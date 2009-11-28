@@ -58,15 +58,6 @@
 // multi-monitor xrandr/xinerama setups.
 #define GRAB_POINTER
 
-// If defined, grabs keyboard input. This lets me recieve some key events that would otherwise be
-// intercepted by the window manager, but makes it impossible to use things like alt-tab, so it
-// probably just going to be an inconvenience.
-//#define GRAB_KEYBOARD
-
-// If defined, disables X key repeating. The problem with this is that if Zark crashes, it will
-// leave it turned off which is annoying :/
-//#define NO_REPEAT
-
 static Display *dpy;
 static int screen;
 static Window wnd, root;
@@ -94,11 +85,6 @@ static int zXrandrSupported(void);
 // with those the IM requires.
 static unsigned int default_event_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask |
     ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | FocusChangeMask;
-
-#ifdef NO_REPEAT
-static int restore_autorepeat;
-#endif
-
 
 // Current dimensions of the OpenGL viewport.
 int viewport_width;
@@ -619,15 +605,6 @@ void zProcessEvents(void)
         case FocusIn:
             XSetICFocus(ic);
 
-            #ifdef NO_REPEAT
-            XAutoRepeatOff(dpy);
-            #endif
-
-            #ifdef GRAB_KEYBOARD
-            // Grab xkb.
-            XGrabKeyboard(dpy, wnd, False, GrabModeAsync, GrabModeAsync, CurrentTime);
-            #endif
-
             #ifdef GRAB_POINTER
             if (fullscreen)
                 XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync, GrabModeAsync,
@@ -637,16 +614,6 @@ void zProcessEvents(void)
 
         case FocusOut:
             XUnsetICFocus(ic);
-
-            #ifdef GRAB_KEYBOARD
-            // Ungrab xkb.
-            XUngrabKeyboard(dpy, CurrentTime);
-            #endif
-
-            #ifdef NO_REPEAT
-            // Restore global autorepeat if it was set.
-            if (restore_autorepeat) XAutoRepeatOn(dpy);
-            #endif
 
             // Release all keys
             zReleaseKeys(0);
@@ -1313,9 +1280,6 @@ void zOpenWindow(void)
     XVisualInfo *visinfo = NULL;
     unsigned long winmask;
     XSetWindowAttributes winattribs;
-#ifdef NO_REPEAT
-    XKeyboardState kbstate;
-#endif
     int attrib_count = 0;
 #define MAX_GLX_ATTRIBS 30
     int attribs[MAX_GLX_ATTRIBS];
@@ -1433,15 +1397,6 @@ void zOpenWindow(void)
 
     zRendererInit();
 
-#ifdef NO_REPEAT
-    // Determine what the current state of auto-repeat is so we can turn it on again if needed, when
-    // we shut down.
-    XGetKeyboardControl(dpy, &kbstate);
-    if (kbstate.global_auto_repeat == AutoRepeatModeOn) {
-        restore_autorepeat = 1;
-    }
-#endif
-
     XFree(visinfo);
     return;
 
@@ -1468,21 +1423,11 @@ void zCloseWindow()
     zRendererDeinit();
 
     zCloseIM();
-
-#ifdef GRAB_KEYBOARD
-    // Ungrab the keyboard.
-    XUngrabKeyboard(dpy, CurrentTime);
-#endif
-
-#ifdef NO_REPEAT
-    // Restore global autorepeat if we must. Done here as well as in FocusOut, if we quit while
-    // having focus, a FocusOut will never be triggered.
-    if (restore_autorepeat) XAutoRepeatOn(dpy);
-#endif
-
     glXMakeCurrent(dpy, None, NULL);
     glXDestroyContext(dpy, context);
+
     zRestoreVideoMode();
+
     XDestroyWindow(dpy, wnd);
     XCloseDisplay(dpy);
     window_active = 0;
@@ -1666,6 +1611,4 @@ char *zGetFileFromDir(const char *path)
     start = 1;
     return NULL;
 }
-
-
 
