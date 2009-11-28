@@ -53,11 +53,6 @@
  * [2] http://www.sbin.org/doc/Xlib/chapt_11.html
  */
 
-// If defined, grabs the pointer in fullscreen mode, so that it can be confined to the window and
-// won't be able to 'get lost' in dead areas when changing display mode to a lower resolution or in
-// multi-monitor xrandr/xinerama setups.
-#define GRAB_POINTER
-
 static Display *dpy;
 static int screen;
 static Window wnd, root;
@@ -441,6 +436,48 @@ static Bool zCheckRepeatedKeyPress(Display *display, XEvent *event, XPointer arg
 
 
 
+// Called when a key is pressed or when going fullscreen, makes sure the pointer grab is released
+// when not fullscreen or when the special in_ungrabkey is pressed (and does some additional
+// housekeeping).
+static void zUpdatePointerGrab(ZKeyEvent *zkev)
+{
+    static int  ungrab_changed = -1;
+    static int  nograb_changed = -1;
+    static ZKey ungrab_key     = Z_KEY_UNKNOWN;
+
+    // Lookup ZKey if in_ungrabkey was just changed.
+    if (ungrab_changed < zVar(in_ungrabkey).changed) {
+        ungrab_key     = zKeyByName(in_ungrabkey);
+        ungrab_changed = zVar(in_ungrabkey).changed;
+    }
+
+    // Update grab immediately if in_nograb was changed or if switching fullscreen mode.
+    if (nograb_changed < zVar(in_nograb).changed || !zkev) {
+
+        if (in_nograb || !fullscreen)
+            XUngrabPointer(dpy, CurrentTime);
+        else if (fullscreen)
+            XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync, GrabModeAsync, wnd, None,
+                CurrentTime);
+
+        nograb_changed = zVar(in_nograb).changed;
+    }
+
+    // Check key press.
+    if (zkev && fullscreen && !in_nograb && ungrab_key == zkev->key && ungrab_key != Z_KEY_UNKNOWN) {
+
+        // I only check for !in_nograb on the keyrelease, so it will still be ungrabbed right after
+        // user sets in_nograb.
+        if (zkev->keystate == Z_KEY_STATE_PRESS)
+            XUngrabPointer(dpy, CurrentTime);
+        else
+            XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync, GrabModeAsync, wnd, None,
+                CurrentTime);
+    }
+}
+
+
+
 void zProcessEvents(void)
 {
     XEvent event;
@@ -513,30 +550,7 @@ void zProcessEvents(void)
             zkev.keystate = event.type == KeyPress ? Z_KEY_STATE_PRESS : Z_KEY_STATE_RELEASE;
             zkev.modmask = zTranslateXModMask(event.xkey.state);
 
-            #ifdef GRAB_POINTER
-            // Temporarily ungrab pointer in fullscreen mode when 'in_ungrabkey' key is down, to
-            // allow interaction with window manager.
-            {
-                static int  ungrab_changed = -1;
-                static ZKey ungrab_key     = Z_KEY_UNKNOWN;
-
-                // Initialize (that is, lookup ZKey) if not initialized yet, or if in_ungrabkey
-                // changed.
-                if (ungrab_changed < zVar(in_ungrabkey).changed) {
-                    ungrab_key     = zKeyByName(in_ungrabkey);
-                    ungrab_changed = zVar(in_ungrabkey).changed;
-                }
-
-                if (fullscreen && ungrab_key != Z_KEY_UNKNOWN) {
-                    if (zkev.key == ungrab_key && zkev.keystate == Z_KEY_STATE_PRESS) {
-                        XUngrabPointer(dpy, CurrentTime);
-                    } else if (zkev.key == ungrab_key && zkev.keystate == Z_KEY_STATE_RELEASE) {
-                        XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync,
-                            GrabModeAsync, wnd, None, CurrentTime);
-                    }
-                }
-            }
-            #endif
+            zUpdatePointerGrab(&zkev);
 
             if (text_input && event.type == KeyPress) {
 
@@ -605,11 +619,9 @@ void zProcessEvents(void)
         case FocusIn:
             XSetICFocus(ic);
 
-            #ifdef GRAB_POINTER
-            if (fullscreen)
+            if (fullscreen && !in_nograb)
                 XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync, GrabModeAsync,
                     wnd, None, CurrentTime);
-            #endif
             break;
 
         case FocusOut:
@@ -1218,24 +1230,15 @@ void zSetFullscreen(int state)
 
     if (state == Z_FULLSCREEN_TOGGLE)
         fullscreen = !fullscreen;
-    else if (state == Z_FULLSCREEN_ON)
-        fullscreen = 1;
     else
-        fullscreen = 0;
+        fullscreen = state == Z_FULLSCREEN_ON ? TRUE : FALSE;
 
+    zUpdatePointerGrab(NULL);
 
-    if (fullscreen) {
+    if (fullscreen)
         zSetVideoMode();
-        #ifdef GRAB_POINTER
-        XGrabPointer(dpy, wnd, True, PointerMotionMask, GrabModeAsync, GrabModeAsync, wnd, None,
-            CurrentTime);
-        #endif
-    } else {
+    else
         zRestoreVideoMode();
-        #ifdef GRAB_POINTER
-        XUngrabPointer(dpy, CurrentTime);
-        #endif
-    }
 
     // Make window full screen if desired, using WM spec (see
     // http://freedesktop.org/wiki/Specifications/wm-spec). Thsi method of making the window
