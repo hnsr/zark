@@ -21,11 +21,17 @@
     #define float4_var(name, a,b,c,d,       desc) float name[4] = {a, b, c, d};
     #define string_var(name, def,           desc) char  name[Z_VAR_STRING_SIZE] = (def);
 #elif defined(MAKE_ARRAYINITS)
-    #define    int_var(name, def, min, max, desc) {Z_VAR_TYPE_INT,    (void *)&name, #name, desc, def,   0, {0, 0, 0}, {0, 0, 0, 0}, NULL, min, max,   0,   0 },
-    #define  float_var(name, def, min, max, desc) {Z_VAR_TYPE_FLOAT,  (void *)&name, #name, desc,   0, def, {0, 0, 0}, {0, 0, 0, 0}, NULL,   0,   0, min, max },
-    #define float3_var(name, a,b,c,         desc) {Z_VAR_TYPE_FLOAT3, (void *)name,  #name, desc,   0,   0, {a, b, c}, {0, 0, 0, 0}, NULL,   0,   0,   0,   0 },
-    #define float4_var(name, a,b,c,d,       desc) {Z_VAR_TYPE_FLOAT4, (void *)name,  #name, desc,   0,   0, {0, 0, 0}, {a, b, c, d}, NULL,   0,   0,   0,   0 },
-    #define string_var(name, def,           desc) {Z_VAR_TYPE_STRING, (void *)name,  #name, desc,   0,   0, {0, 0, 0}, {0, 0, 0, 0},  def,   0,   0,   0,   0 },
+    #define    int_var(name, def, min, max, desc) {Z_VAR_TYPE_INT,    (void *)&name, #name, desc, 0, def,   0, {0, 0, 0}, {0, 0, 0, 0}, NULL, min, max,   0,   0 },
+    #define  float_var(name, def, min, max, desc) {Z_VAR_TYPE_FLOAT,  (void *)&name, #name, desc, 0,   0, def, {0, 0, 0}, {0, 0, 0, 0}, NULL,   0,   0, min, max },
+    #define float3_var(name, a,b,c,         desc) {Z_VAR_TYPE_FLOAT3, (void *) name, #name, desc, 0,   0,   0, {a, b, c}, {0, 0, 0, 0}, NULL,   0,   0,   0,   0 },
+    #define float4_var(name, a,b,c,d,       desc) {Z_VAR_TYPE_FLOAT4, (void *) name, #name, desc, 0,   0,   0, {0, 0, 0}, {a, b, c, d}, NULL,   0,   0,   0,   0 },
+    #define string_var(name, def,           desc) {Z_VAR_TYPE_STRING, (void *) name, #name, desc, 0,   0,   0, {0, 0, 0}, {0, 0, 0, 0},  def,   0,   0,   0,   0 },
+#elif defined(MAKE_ENUM)
+    #define    int_var(name, def, min, max, desc) Z_VAR_##name,
+    #define  float_var(name, def, min, max, desc) Z_VAR_##name,
+    #define float3_var(name, a,b,c,         desc) Z_VAR_##name,
+    #define float4_var(name, a,b,c,d,       desc) Z_VAR_##name,
+    #define string_var(name, def,           desc) Z_VAR_##name,
 #else
     #error Included variables.def without required MAKE_ macro set
 #endif
@@ -69,10 +75,6 @@ string_var(in_ungrabkey, "KEY_LALT",                "If set to a key name, ungra
    int_var(printfps,              0,      0,     1, "Set this to have FPS printed at fixed intervals.")
  float_var(printfpstime,       3000,      1, 99999, "FPS printing interval in milliseconds.")
  float_var(movespeed,             1,      0, 10000, "Camera movement speed factor.")
-float3_var(test_f3,           1,1,1, "Testvar.")
-float4_var(test_f4,         1,1,1,1, "Testvar.")
-string_var(test_str,   "teststring", "Testvar.")
-
 
 #undef int_var
 #undef float_var

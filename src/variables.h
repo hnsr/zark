@@ -7,6 +7,15 @@
 #define Z_VAR_STRING_SIZE 256
 
 
+// Allows me to index variables[] with Z_VAR_varname.
+typedef enum ZVariableName
+{
+    #define MAKE_ENUM
+    #include "variables.def"
+    #undef MAKE_ENUM
+} ZVariableName;
+
+
 typedef enum ZVariableType
 {
     Z_VAR_TYPE_INVALID,
@@ -27,6 +36,10 @@ typedef struct ZVariable
     void *varptr; // Pointer to actual variable storage
     const char *name;
     const char *description;
+
+    int changed; // Number of times this variable was changed, makes it cheap and easy to check if
+                 // a variable was changed without having to compare the value itself (mostly useful
+                 // for strings and tuples).
 
     // The default values and limits for this variable. I would use unions here, but it seems I can
     // only initialize unions at run-time (C99 allows union initializers, but MSVC won't), which I
@@ -65,6 +78,8 @@ void zLoadConfig(void);
 
 void zSaveConfig(void);
 
+// Make accessing variables[] less verbose.
+#define zVar(name) (variables[Z_VAR_##name])
 
 // Set variable to val, clamped to variable's min/max.
 #define zVarSetFloat(var,val) do {\

@@ -531,14 +531,14 @@ void zProcessEvents(void)
             // Temporarily ungrab pointer in fullscreen mode when 'in_ungrabkey' key is down, to
             // allow interaction with window manager.
             {
-                static ZKey ungrab_key_set = FALSE;
+                static int  ungrab_changed = -1;
                 static ZKey ungrab_key     = Z_KEY_UNKNOWN;
 
                 // Initialize (that is, lookup ZKey) if not initialized yet, or if in_ungrabkey
                 // changed.
-                if (!ungrab_key_set) {
-                    ungrab_key_set = TRUE;
-                    ungrab_key = zKeyByName(in_ungrabkey);
+                if (ungrab_changed < zVar(in_ungrabkey).changed) {
+                    ungrab_key     = zKeyByName(in_ungrabkey);
+                    ungrab_changed = zVar(in_ungrabkey).changed;
                 }
 
                 if (fullscreen && ungrab_key != Z_KEY_UNKNOWN) {

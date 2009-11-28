@@ -508,6 +508,8 @@ static int zConsoleSet(lua_State *L)
             assert(0 && "Unknown variable type.");
     }
 
+    var->changed++;
+
     return 0;
 }
 
@@ -582,6 +584,8 @@ static int zConsoleIncrease(lua_State *L)
             break;
     }
 
+    var->changed++;
+
     return 0;
 }
 
@@ -617,6 +621,8 @@ static int zConsoleDecrease(lua_State *L)
             break;
     }
 
+    var->changed++;
+
     return 0;
 }
 
@@ -637,6 +643,8 @@ static int zConsoleToggle(lua_State *L)
     } else {
         zError("Given variable was not an integer.");
     }
+
+    var->changed++;
 
     return 0;
 }
@@ -677,6 +685,8 @@ static int zConsoleRevert(lua_State *L)
         default:
             assert(0 && "Unknown variable type.");
     }
+
+    var->changed++;
 
     return 0;
 }
