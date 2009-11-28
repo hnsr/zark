@@ -38,8 +38,8 @@
 
 //         name             default     [min   max]  description
    int_var(r_fullscreen,          0,      0,     1, "Set this to use a fullscreen window.")
-   int_var(r_screenwidth,       800,      1, 99999, "Screen width in fullscreen mode.")
-   int_var(r_screenheight,      600,      1, 99999, "Screen height in fullscreen mode.")
+   int_var(r_screenwidth,         0,      0, 99999, "Screen width in fullscreen mode.")
+   int_var(r_screenheight,        0,      0, 99999, "Screen height in fullscreen mode.")
    int_var(r_screenrefresh,       0,      0,   999, "Screen refresh rate in fullscreen mode. Set to 0 to use default.")
    int_var(r_winwidth,          800,      1, 99999, "Viewport width in windowed mode.")
    int_var(r_winheight,         600,      1, 99999, "Viewport height in windowed mode.")

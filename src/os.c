@@ -1235,16 +1235,16 @@ void zSetFullscreen(int state)
 
     zUpdatePointerGrab(NULL);
 
-    if (fullscreen)
+    if (fullscreen && r_screenwidth && r_screenheight)
         zSetVideoMode();
     else
         zRestoreVideoMode();
 
     // Make window full screen if desired, using WM spec (see
-    // http://freedesktop.org/wiki/Specifications/wm-spec). Thsi method of making the window
+    // http://freedesktop.org/wiki/Specifications/wm-spec). This method of making the window
     // fullscreen wouldn't work if I changed the resolution using xf86vidmode, since that extension
     // would make the display a viewport into a possibly larger virtual screen, and so the window
-    // would end up being large than the display and the user would have to use the mouse to 'pan'
+    // would end up being larger than the display and the user would have to use the mouse to 'pan'
     // the viewport.. Now that I'm changing the resolution with Xrandr this works however.
     atom_state    = XInternAtom(dpy, "_NET_WM_STATE", False);
     atom_state_fs = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
@@ -1259,7 +1259,6 @@ void zSetFullscreen(int state)
     ev.xclient.data.l[2] = 0;
 
     XSendEvent(dpy, DefaultRootWindow(dpy), False, SubstructureNotifyMask, &ev);
-    XSync(dpy, False);
 
     // This ensures the window really is on top (I found that in metacity with focus-on-mouseover it
     // sometimes isn't) and that the cursor is centered in the fullscreen window.
@@ -1270,8 +1269,6 @@ void zSetFullscreen(int state)
         changes.stack_mode = Above;
 
         XConfigureWindow(dpy, wnd, CWStackMode, &changes);
-        XWarpPointer(dpy, None, wnd, 0,0,0,0, r_screenwidth/2,r_screenheight/2);
-        XSync(dpy, False);
     }
 }
 
