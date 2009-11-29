@@ -155,7 +155,13 @@ void zCheckRendererError(void)
 
     if ( (error = glGetError()) != GL_NO_ERROR ) {
         error_str = gluErrorString(error);
+#ifdef DEBUG
+        zFatal("An OpenGL error occured, \"%s\".", error_str);
+        zShutdown();
+        exit(EXIT_FAILURE);
+#else
         zWarning("An OpenGL error occured, \"%s\".", error_str);
+#endif
     }
 }
 
