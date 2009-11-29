@@ -710,9 +710,17 @@ void zOpenWindow(void)
         style = WINDOW_STYLE_FS;
         ex_style = EX_WINDOW_STYLE_FS;
 
-        if (!zSetDisplayMode(&width, &height)) {
-            zError("Failed to set display mode.");
-            goto zOpenWindow_0;
+        if (r_screenwidth && r_screenheight) {
+            if (!zSetDisplayMode(&width, &height)) {
+                zError("Failed to set display mode.");
+                goto zOpenWindow_0;
+            }
+        } else {
+            // Use current display mode, but I'll need to know its width/height.
+            // FIXME: This assumes the window opens on the primary monitor.. how well will this work
+            // in multi-monitor setups?
+            width  = GetSystemMetrics(SM_CXSCREEN);
+            height = GetSystemMetrics(SM_CYSCREEN);
         }
     } else {
         style = WINDOW_STYLE;
