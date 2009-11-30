@@ -94,7 +94,6 @@ void zShaderDeinit(void)
 // that need to updated online once a frame (z_time), or once after a new scene is loaded (z_sun_*).
 void zUpdateShaderProgram(ZShaderProgram *program)
 {
-#if 1
     // Only update if this shader program wasn't updated yet this frame.
     if (program->frame_updated != frame_count) {
         if (program->uniforms[Z_UNIFORM_TIME] >= 0)
@@ -104,7 +103,6 @@ void zUpdateShaderProgram(ZShaderProgram *program)
     // If this shader has never been updated, set samplers as well
     if (program->frame_updated == 0) {
 
-        // XXX: This causes a illegal operation on Intel HW.. why?
         if (program->uniforms[Z_UNIFORM_SAMPLER_D] >= 0)
             glUniform1i(program->uniforms[Z_UNIFORM_SAMPLER_D], 0);
 
@@ -126,7 +124,6 @@ void zUpdateShaderProgram(ZShaderProgram *program)
 
     program->frame_updated = frame_count;
     program->scene_updated = sceneload_count;
-#endif
 }
 
 

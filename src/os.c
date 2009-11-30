@@ -738,8 +738,6 @@ static int zSetupIM(void)
     // Set X locale modifiers.
     if (! (lcmods = XSetLocaleModifiers("")) )
         zWarning("Failed to set X locale modifiers.");
-    //else
-        //zDebug("X locale modifiers set to \"%s\"", lcmods);
 
 
     // Open the input method.
@@ -757,10 +755,10 @@ static int zSetupIM(void)
         zWarning("Failed to query IM values.");
     } else {
         int i;
-        //zDebug("%d input styles found:", imstyles->count_styles);
+
         for (i = 0; i < imstyles->count_styles; i++) {
-            //zDebug("  %d: %#x", i+1, imstyles->supported_styles[i]);
-            if ( my_style == imstyles->supported_styles[i] ) imstyle_supported = 1;
+            if ( my_style == imstyles->supported_styles[i] )
+                imstyle_supported = 1;
         }
         XFree(imstyles);
     }
