@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="zark"
 	ProjectGUID="{036E9135-763C-480B-BBAD-9901F990D2F6}"
 	RootNamespace="zark"
@@ -54,6 +54,7 @@
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
 				CompileAs="1"
+				ForcedIncludeFiles="$(ProjectDir)\config.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -130,6 +131,7 @@
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
 				CompileAs="1"
+				ForcedIncludeFiles="$(ProjectDir)\config.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -185,11 +187,11 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\src\camera.h"
+				RelativePath="..\..\src\camera.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\common.h"
+				RelativePath="..\..\src\common.h"
 				>
 			</File>
 			<File
@@ -197,75 +199,75 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\console.h"
+				RelativePath="..\..\src\console.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\image.h"
+				RelativePath="..\..\src\image.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\impulse.h"
+				RelativePath="..\..\src\impulse.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\input.h"
+				RelativePath="..\..\src\input.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\keys.def"
+				RelativePath="..\..\src\keys.def"
 				>
 			</File>
 			<File
-				RelativePath="..\src\main.h"
+				RelativePath="..\..\src\main.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\material.h"
+				RelativePath="..\..\src\material.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\mesh.h"
+				RelativePath="..\..\src\mesh.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\os.h"
+				RelativePath="..\..\src\os.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\renderer.h"
+				RelativePath="..\..\src\renderer.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\scene.h"
+				RelativePath="..\..\src\scene.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\shader.h"
+				RelativePath="..\..\src\shader.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\textrender.h"
+				RelativePath="..\..\src\textrender.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\util.h"
+				RelativePath="..\..\src\util.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\variables.def"
+				RelativePath="..\..\src\variables.def"
 				>
 			</File>
 			<File
-				RelativePath="..\src\variables.h"
+				RelativePath="..\..\src\variables.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\zlua.h"
+				RelativePath="..\..\src\zlua.h"
 				>
 			</File>
 			<File
-				RelativePath="..\src\zmath.h"
+				RelativePath="..\..\src\zmath.h"
 				>
 			</File>
 		</Filter>
@@ -281,83 +283,83 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\src\camera.c"
+				RelativePath="..\..\src\camera.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\console.c"
+				RelativePath="..\..\src\console.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\image.c"
+				RelativePath="..\..\src\image.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\impulse.c"
+				RelativePath="..\..\src\impulse.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\input.c"
+				RelativePath="..\..\src\input.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\main.c"
+				RelativePath="..\..\src\main.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\material.c"
+				RelativePath="..\..\src\material.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\mesh.c"
+				RelativePath="..\..\src\mesh.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\mesh_loader_obj.c"
+				RelativePath="..\..\src\mesh_loader_obj.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\mesh_loader_ply.c"
+				RelativePath="..\..\src\mesh_loader_ply.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\os_win32.c"
+				RelativePath="..\..\src\os_win32.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\renderer.c"
+				RelativePath="..\..\src\renderer.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\scene.c"
+				RelativePath="..\..\src\scene.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\shader.c"
+				RelativePath="..\..\src\shader.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\textrender.c"
+				RelativePath="..\..\src\textrender.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\util.c"
+				RelativePath="..\..\src\util.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\variables.c"
+				RelativePath="..\..\src\variables.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\zlua.c"
+				RelativePath="..\..\src\zlua.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\zlua_console.c"
+				RelativePath="..\..\src\zlua_console.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\zmath.c"
+				RelativePath="..\..\src\zmath.c"
 				>
 			</File>
 		</Filter>

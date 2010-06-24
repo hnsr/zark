@@ -21,8 +21,6 @@
         #define DEBUG
     #endif
 
-    #include "../win32/config.h"
-
     #include <conio.h>
 
     // MS compiler doesn't have __func__, but does have __FUNCTION__, which does the same.
