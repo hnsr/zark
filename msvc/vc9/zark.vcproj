@@ -54,7 +54,7 @@
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
 				CompileAs="1"
-				ForcedIncludeFiles="$(ProjectDir)\config.h"
+				ForcedIncludeFiles="$(ProjectDir)\..\config.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -131,7 +131,7 @@
 				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
 				CompileAs="1"
-				ForcedIncludeFiles="$(ProjectDir)\config.h"
+				ForcedIncludeFiles="$(ProjectDir)\..\config.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
