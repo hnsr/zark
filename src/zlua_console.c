@@ -349,6 +349,12 @@ static int zConsoleAddMesh(lua_State *L)
         zError("Unable to load mesh without an active scene.");
         return 0;
     }
+
+    if (!strlen(name)) {
+        zError("Failed to load mesh, no mesh name given.");
+        return 0;
+    }
+
     zPrint("Adding mesh \"%s\" to current scene.\n", name);
 
     if (lua_tointeger(L, 2))
