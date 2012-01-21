@@ -23,13 +23,16 @@ static void zTextConsoleInputHandler(ZKeyEvent *zkev, char *str)
 
         zPrint("\n");
 
-        // Store a copy of command executed for prevcmd.
-        free(prevcmd);
-        prevcmd = strdup(cmdbuf.buf);
+        if (cmdbuf.bufsize) // Only execute if cmdbuf wasn't empty
+        {
+            // Store a copy of the given command (unless it was empty)
+            free(prevcmd);
+            prevcmd = strdup(cmdbuf.buf);
 
-        // Execute cmdstring in text buffer and reset.
-        zLuaRunString(Z_VM_CONSOLE, cmdbuf.buf);
-        zResetTextBuffer(&cmdbuf);
+            // Execute cmdstring in text buffer and reset.
+            zLuaRunString(Z_VM_CONSOLE, cmdbuf.buf);
+            zResetTextBuffer(&cmdbuf);
+        }
 
         // Reprint prompt (if we didn't just exit text input mode).
         if (text_input) {
