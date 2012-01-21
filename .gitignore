@@ -15,6 +15,7 @@ build-aux
 config.h.in
 config.h
 src/.deps
+zark.trace
 msvc/vc9/data
 msvc/vc9/build/Debug
 msvc/vc9/build/Release
