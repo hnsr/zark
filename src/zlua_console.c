@@ -370,6 +370,8 @@ static int zConsoleRunScript(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
 
+    zPrint("Running script \"%s\".\n", name);
+
     zLuaRunFile(Z_VM_CONSOLE, name);
 
     return 0;

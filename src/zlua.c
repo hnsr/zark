@@ -120,9 +120,15 @@ void zLuaRunString(unsigned int vm, const char *code)
 // Run a lua script. Prints a warning if there were any errors running the code.
 void zLuaRunFile(unsigned int vm, const char *filename)
 {
-    const char *path = zGetPath(filename, NULL, Z_FILE_TRYUSER);
+    const char *path;
 
-    if (!path) {
+    if (strlen(filename) == 0)
+    {
+        zWarning("Failed to run lua: no filename given", lua_tostring(console_vm, -1));
+        return;
+    }
+
+    if ( !(path = zGetPath(filename, NULL, Z_FILE_TRYUSER)) ) {
         zError("%s: Failed to construct path for \"%s\".", __func__, filename);
         return;
     }
