@@ -72,6 +72,7 @@ int zMain(int argc, char** argv)
     zLoadConfig();
     zLoadKeyBindings();
 
+    zPrint("Running script \"%s\".\n", Z_FILE_STARTUP);
     zLuaRunFile(Z_VM_CONSOLE, Z_FILE_STARTUP);
 
     zOpenWindow();
