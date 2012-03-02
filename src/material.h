@@ -74,8 +74,6 @@ typedef struct ZMaterial
     char fragment_shader[Z_RESOURCE_NAME_SIZE];
     ZShaderProgram *program;
 
-    GLuint list_id;
-
     struct ZMaterial *next;
 
 } ZMaterial;

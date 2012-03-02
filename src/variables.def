@@ -49,7 +49,6 @@
    int_var(r_doublebuffer,        1,      0,     1, "Create double buffered OpenGL visual if set to 1.")
    int_var(r_clearcolor,          0,      0,     1, "Clear color buffer every frame.")
    int_var(r_mipmap,              1,      0,     1, "Build mipmaps when loading textures if set to 1.")
-   int_var(r_matdisplaylist,      1,      0,     1, "Use display lists for material state changes.")
    int_var(r_shaderlog,           0,      0,     1, "Print compilation log for compiled shaders even if succesful.")
    int_var(r_noshaders,           0,      0,     1, "Prevents use of GLSL shaders when set to 1.")
  float_var(r_aspectratio,         0,      0,   100, "If not set to 0, overrides the aspect ratio of the viewport dimensions.")

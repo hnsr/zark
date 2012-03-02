@@ -37,7 +37,6 @@ ZMaterial default_material = {
     {'s','h','a','d','e','r','s','/','g','o','u','r','a','u','d','.','z','v','s','\0'},
     {'s','h','a','d','e','r','s','/','g','o','u','r','a','u','d','.','z','f','s','\0'},
     NULL,
-    0,
     NULL
 };
 
@@ -275,8 +274,7 @@ ZMaterial *zLookupMaterial(const char *name)
 
 
 
-// Set OpenGL state for rendering material, this function can be called between NewList/EndList
-// calls to put it all in a display list, or just on the fly in zMakeMaterialActive().
+// Set OpenGL state for rendering material
 static void zApplyMaterialState(ZMaterial *mat)
 {
     glMaterialfv(GL_FRONT, GL_AMBIENT,   mat->ambient_color);
@@ -337,14 +335,14 @@ static void zApplyMaterialState(ZMaterial *mat)
 
 
 
-// Load textures, shader etc for material and create display list.
+// Load textures, shader etc for material
 void zMakeMaterialResident(ZMaterial *mat)
 {
     assert(mat);
 
     // Make sure mat was initialized / made non-resident properly.
     assert(mat->is_resident == 0 && !mat->diffuse_map && !mat->specular_map && !mat->normal_map &&
-           !mat->program && !mat->list_id);
+           !mat->program);
 
     // Always make resident even if some resources fail to load, this is so I don't get stuck in an
     // infinite loop. Should probably give a warning if something fails to load however..
@@ -381,43 +379,20 @@ void zMakeMaterialResident(ZMaterial *mat)
             zWarning("Failed to load shader program for material \"%s\".", mat->name);
         }
     }
-
-
-    // Optionally, wrap material settings and active textures into display list. Not sure if this is
-    // useful, it's going to be deprecated in OpenGL 3.x anyway..
-    if (r_matdisplaylist) {
-        mat->list_id = glGenLists(1);
-
-        if (mat->list_id) {
-            glNewList(mat->list_id, GL_COMPILE);
-            zApplyMaterialState(mat);
-            glEndList();
-        } else {
-            zWarning("Failed to generate list name for material \"%s\".", mat->name);
-        }
-    }
 }
 
 
 
-// Delete material's display list and mark it non-resident.
+// Mark material non-resident
 void zMakeMaterialNonResident(ZMaterial *mat, void *ignored)
 {
     if (!mat->is_resident) return;
 
-    if (mat->list_id) {
-        assert(glIsList(mat->list_id));
-        glDeleteLists(mat->list_id, 1);
-        mat->list_id = 0;
-    }
-
     mat->diffuse_map  = NULL;
     mat->specular_map = NULL;
     mat->normal_map   = NULL;
-
-    mat->program = NULL;
-
-    mat->is_resident = 0;
+    mat->program      = NULL;
+    mat->is_resident  = 0;
 }
 
 
@@ -508,22 +483,16 @@ void zMakeMaterialActive(ZMaterial *mat)
     // Make sure the texture parameters (texture filtering, wrap modes, etc) are set right for the
     // material. I keep track of what the texture flags are set to in ZTexture.flags, so that I
     // don't set them if I don't need to.
-    // XXX: If I ever ditch displaylists, I should do this in zApplyMaterialState directly.
+    // XXX: I should do this in zApplyMaterialState directly.
     zSetTextureParams(mat, mat->diffuse_map);
     zSetTextureParams(mat, mat->normal_map);
     zSetTextureParams(mat, mat->specular_map);
 
-    // Set material state, or call the display list if there is no display list (i.e. when material
-    // display lists are disabled.
-    if (mat->list_id)
-        glCallList(mat->list_id);
-    else
-        zApplyMaterialState(mat);
+    zApplyMaterialState(mat);
 
     // Update shader uniforms etc..
     if (mat->program)
         zUpdateShaderProgram(mat->program);
-
 
     previous_mat = mat;
 }
@@ -576,41 +545,26 @@ ZMaterial *zCopyMaterial(ZMaterial *mat)
 
     *new = *mat;
 
-    // Make copy non-resident, so that I'm forced to generate a new display list next time it is
-    // made active and made resident again.
-    new->is_resident = 0;
-    new->list_id = 0;
-    new->diffuse_map  = NULL;
-    new->normal_map   = NULL;
-    new->specular_map = NULL;
-    new->program      = NULL;
-
     return new;
 }
 
 
 
-// Free material and delete display list
+// Free material
 void zDeleteMaterial(ZMaterial *mat)
 {
     assert(mat);
-
-    if (mat->list_id){
-        assert(glIsList(mat->list_id));
-        glDeleteLists(mat->list_id, 1);
-    }
-
     free(mat);
 }
 
 
 
 // This should be called when material OpenGL state has been changed in between zMaterialMakeActive
-// calls. This is because I keep track of the previously active material and skip calling its
-// displaylist again if the same material is activated again, since it would be redudant. This
-// assumption wouldn't hold of something else touched the material state. For now I am just calling
-// this right before I draw a scene, since I won't be touching any material OpenGL state myself when
-// drawing a scene, but something after that (GUI?) might..
+// calls. This is because I keep track of the previously active material and skip needlessly setting
+// its state again if the same material is activated. This assumption wouldn't hold if something
+// else touched the material state. For now I am just calling this right before I draw a scene,
+// since I won't be touching any material OpenGL state myself when drawing a scene, but something
+// after that (GUI?) might..
 void zResetMaterialState(void)
 {
     previous_mat = NULL;
