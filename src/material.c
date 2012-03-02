@@ -398,7 +398,11 @@ void zMakeMaterialNonResident(ZMaterial *mat, void *ignored)
 
 
 
-// Set texture parameters according to those specified in the material, if neccesary.
+// Set texture parameters according to those specified in the material, if neccesary. Unlike OpenGL
+// itself, I store parameters (like repeat, clamping, filtering) per-material rather than
+// per-texture. This allows me to share textures between materials, but it means I may need to
+// update these parameters when switching to a different material that uses a shared texture but
+// possibly with different parameters.
 static void zSetTextureParams(ZMaterial *mat, ZTexture *tex)
 {
     int bound = 0;
