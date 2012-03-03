@@ -274,9 +274,93 @@ ZMaterial *zLookupMaterial(const char *name)
 
 
 
+// Set texture parameters according to those specified in the material, if neccesary. Unlike OpenGL
+// itself, I store parameters (like repeat, clamping, filtering) per-material rather than
+// per-texture. This allows me to share textures between materials, but it means I may need to
+// update these parameters when switching to a different material that uses a shared texture but
+// possibly with different parameters.
+static void zSetTextureParams(ZMaterial *mat, ZTexture *tex)
+{
+    int bound = 0;
+
+    if (!tex) return;
+
+    assert(tex->gltexname > 0);
+
+    if (mat->wrap_mode != tex->wrap_mode) {
+
+        //zDebug("Setting wrap_mode for texture \"%s\".", tex->name);
+
+        if (!bound) {
+            glBindTexture(GL_TEXTURE_2D, tex->gltexname);
+            bound = 1;
+        }
+
+        if (mat->wrap_mode == Z_TEX_WRAP_REPEAT) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        } else if (mat->wrap_mode == Z_TEX_WRAP_CLAMP) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        } else if (mat->wrap_mode == Z_TEX_WRAP_CLAMPEDGE) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
+        tex->wrap_mode = mat->wrap_mode;
+    }
+
+    if (mat->min_filter != tex->min_filter) {
+
+        if (!bound) {
+            glBindTexture(GL_TEXTURE_2D, tex->gltexname);
+            bound = 1;
+        }
+
+        //zDebug("Setting min_filter for texture \"%s\".", tex->name);
+
+        if (mat->min_filter == Z_TEX_FILTER_NEAREST) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        } else if (mat->min_filter == Z_TEX_FILTER_LINEAR) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, r_mipmap ?
+            GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+        }
+        tex->min_filter = mat->min_filter;
+    }
+
+    if (mat->mag_filter != tex->mag_filter) {
+
+        if (!bound) {
+            glBindTexture(GL_TEXTURE_2D, tex->gltexname);
+            bound = 1;
+        }
+
+        //zDebug("Setting mag_filter for texture \"%s\".", tex->name);
+
+        if (mat->mag_filter == Z_TEX_FILTER_NEAREST)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        else if (mat->mag_filter == Z_TEX_FILTER_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        tex->mag_filter = mat->mag_filter;
+    }
+
+    if (bound) glBindTexture(GL_TEXTURE_2D, 0);
+
+}
+
+
+
 // Set OpenGL state for rendering material
 static void zApplyMaterialState(ZMaterial *mat)
 {
+    // Make sure the texture parameters (texture filtering, wrap modes, etc) are set right for the
+    // material. I keep track of what the texture paremeters are set to in ZTexture, so that I don't
+    // set them if I don't need to.
+    zSetTextureParams(mat, mat->diffuse_map);
+    zSetTextureParams(mat, mat->normal_map);
+    zSetTextureParams(mat, mat->specular_map);
+
     glMaterialfv(GL_FRONT, GL_AMBIENT,   mat->ambient_color);
     glMaterialfv(GL_FRONT, GL_DIFFUSE,   mat->diffuse_color);
     glMaterialfv(GL_FRONT, GL_SPECULAR,  mat->specular_color);
@@ -398,81 +482,6 @@ void zMakeMaterialNonResident(ZMaterial *mat, void *ignored)
 
 
 
-// Set texture parameters according to those specified in the material, if neccesary. Unlike OpenGL
-// itself, I store parameters (like repeat, clamping, filtering) per-material rather than
-// per-texture. This allows me to share textures between materials, but it means I may need to
-// update these parameters when switching to a different material that uses a shared texture but
-// possibly with different parameters.
-static void zSetTextureParams(ZMaterial *mat, ZTexture *tex)
-{
-    int bound = 0;
-
-    if (!tex) return;
-
-    assert(tex->gltexname > 0);
-
-    if (mat->wrap_mode != tex->wrap_mode) {
-
-        //zDebug("Setting wrap_mode for texture \"%s\".", tex->name);
-
-        if (!bound) {
-            glBindTexture(GL_TEXTURE_2D, tex->gltexname);
-            bound = 1;
-        }
-
-        if (mat->wrap_mode == Z_TEX_WRAP_REPEAT) {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        } else if (mat->wrap_mode == Z_TEX_WRAP_CLAMP) {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        } else if (mat->wrap_mode == Z_TEX_WRAP_CLAMPEDGE) {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        }
-        tex->wrap_mode = mat->wrap_mode;
-    }
-
-    if (mat->min_filter != tex->min_filter) {
-
-        if (!bound) {
-            glBindTexture(GL_TEXTURE_2D, tex->gltexname);
-            bound = 1;
-        }
-
-        //zDebug("Setting min_filter for texture \"%s\".", tex->name);
-
-        if (mat->min_filter == Z_TEX_FILTER_NEAREST) {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-        } else if (mat->min_filter == Z_TEX_FILTER_LINEAR) {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, r_mipmap ?
-            GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-        }
-        tex->min_filter = mat->min_filter;
-    }
-
-    if (mat->mag_filter != tex->mag_filter) {
-
-        if (!bound) {
-            glBindTexture(GL_TEXTURE_2D, tex->gltexname);
-            bound = 1;
-        }
-
-        //zDebug("Setting mag_filter for texture \"%s\".", tex->name);
-
-        if (mat->mag_filter == Z_TEX_FILTER_NEAREST)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        else if (mat->mag_filter == Z_TEX_FILTER_LINEAR)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        tex->mag_filter = mat->mag_filter;
-    }
-
-    if (bound) glBindTexture(GL_TEXTURE_2D, 0);
-
-}
-
 
 
 // Update OpenGL state for drawing with given material.
@@ -483,14 +492,6 @@ void zMakeMaterialActive(ZMaterial *mat)
 
     if (!mat->is_resident)
         zMakeMaterialResident(mat);
-
-    // Make sure the texture parameters (texture filtering, wrap modes, etc) are set right for the
-    // material. I keep track of what the texture flags are set to in ZTexture.flags, so that I
-    // don't set them if I don't need to.
-    // XXX: I should do this in zApplyMaterialState directly.
-    zSetTextureParams(mat, mat->diffuse_map);
-    zSetTextureParams(mat, mat->normal_map);
-    zSetTextureParams(mat, mat->specular_map);
 
     zApplyMaterialState(mat);
 
