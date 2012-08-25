@@ -22,22 +22,18 @@ static ZTexture *textures[Z_TEX_HASH_SIZE];
 static ZMaterial *previous_mat;
 
 ZMaterial default_material = {
-    { 'd', 'e', 'f', 'a', 'u', 'l', 't', '\0' },
+    /*name*/ "default",
     /*is_resident*/ 0, /*flags*/ 0, /*blend_type*/ 0,
     /*ambient*/  { 1.0f, 1.0f, 1.0f, 1.0f },
     /*diffuse*/  { 0.5f, 0.5f, 0.5f, 1.0f },
     /*specular*/ { 1.0f, 1.0f, 1.0f, 1.0f },
     /*emission*/ { 0.0f, 0.0f, 0.0f, 1.0f },
     /*shininess*/ 100.0f,
-    Z_TEX_WRAP_REPEAT, /*min*/ Z_TEX_FILTER_LINEAR, /*mag*/ Z_TEX_FILTER_LINEAR,
-    {'t','e','x','t','u','r','e','s','/','d','e','f','a','u','l','t','.','p','n','g','\0'},
-    {'\0'},
-    {'\0'},
+    /*wrap*/ Z_TEX_WRAP_REPEAT, /*min*/ Z_TEX_FILTER_LINEAR, /*mag*/ Z_TEX_FILTER_LINEAR,
+    "textures/default.png", "", "",
     NULL, NULL, NULL,
-    {'s','h','a','d','e','r','s','/','g','o','u','r','a','u','d','.','z','v','s','\0'},
-    {'s','h','a','d','e','r','s','/','g','o','u','r','a','u','d','.','z','f','s','\0'},
-    NULL,
-    NULL
+    "shaders/gouraud.zvs", "shaders/gouraud.zfs",
+    NULL, NULL
 };
 
 
