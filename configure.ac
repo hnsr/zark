@@ -1,5 +1,5 @@
 dnl Initialize autoconf
-AC_INIT([zark],[0.1],[hnsr@xs4all.nl])
+AC_INIT([zark],[0.1],[hans@nieser.nl])
 
 dnl Try to keep as much autoconf stuff as possible out of the root dir..
 AC_CONFIG_AUX_DIR([build-aux])
@@ -18,7 +18,7 @@ AC_C_BIGENDIAN
 
 dnl Attempt to enable C99 mode
 AC_PROG_CC_C99
-AS_IF([test "x$ac_cv_prog_cc_c99" = xno], AC_MSG_WARN([C99 wasn't enabled!]))
+AS_IF([test "x$ac_cv_prog_cc_c99" = xno], AC_MSG_WARN([C99 was not enabled!]))
 
 dnl TODO: Maybe also check for some of these
 dnl time.h signal.h locale.h unistd.h pwd.h sys/types.h sys/stat.h sys/time.h
