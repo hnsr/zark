@@ -641,9 +641,12 @@ static int zParseKeyBindings(const char *filename, const char *prefix, int flags
     lua_register(L, "bindkey",  zLuaBindKey);
     zLua(L,
         "local b = bindkey\n"
-        "script_down = function(k,l,...) arg.n=nil;b {state=1, key=k, lua=l, mods=arg} end\n"
-        "script_up   = function(k,l,...) arg.n=nil;b {state=0, key=k, lua=l, mods=arg} end\n"
-        "impulse     = function(k,i,...) arg.n=nil;b {state=1, key=k, imp=i, mods=arg} end\n"
+        //"script_down = function(k,l,...) arg.n=nil;b {state=1, key=k, lua=l, mods=arg} end\n"
+        //"script_up   = function(k,l,...) arg.n=nil;b {state=0, key=k, lua=l, mods=arg} end\n"
+        //"impulse     = function(k,i,...) arg.n=nil;b {state=1, key=k, imp=i, mods=arg} end\n"
+        "script_down = function(k,l,...) b {state=1, key=k, lua=l, mods=...} end\n"
+        "script_up   = function(k,l,...) b {state=0, key=k, lua=l, mods=...} end\n"
+        "impulse     = function(k,i,...) b {state=1, key=k, imp=i, mods=...} end\n"
         "bindkey = nil\n"
     );
 
