@@ -218,6 +218,7 @@ static int zParseVariables(const char *filename, const char *prefix, int flags)
     zLua(L, "new_env = {}\n"
             "setmetatable(new_env, { __newindex = function (t,k,v) set(k,v) end })\n"
             "setfenv(0, new_env)\n");
+    //  ^ Fixme: this is no longer allowed in lua 5.2
 
     if (luaL_dofile(L, path)) {
         zWarning("Failed to parse variables: %s", lua_tostring(L, -1));
