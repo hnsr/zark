@@ -51,7 +51,8 @@ AC_CHECK_LIB([ILU], [main], [], [AC_MSG_ERROR([libILU not found, make sure DevIL
 
 
 CFLAGS="$CFLAGS $x11_CFLAGS $ftgl_CFLAGS $lua_CFLAGS $xrandr_CFLAGS"
-LIBS="$LIBS $x11_LIBS $ftgl_LIBS $lua_LIBS $xrandr_LIBS"
+dnl FIXME: do proper check for GL and GLU
+LIBS="$LIBS -lGL -lGLU $x11_LIBS $ftgl_LIBS $lua_LIBS $xrandr_LIBS"
 
 
 
