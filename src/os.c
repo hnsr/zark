@@ -81,18 +81,12 @@ static int zXrandrSupported(void);
 static unsigned int default_event_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask |
     ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | FocusChangeMask;
 
-// Current dimensions of the OpenGL viewport.
-int viewport_width;
-int viewport_height;
-
-
 
 // Attempt to do a clean shutdown when we're being terminated.
 static void sighandler(int sig)
 {
     running = 0;
 }
-
 
 
 // Application entry-point.
