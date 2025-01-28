@@ -26,3 +26,4 @@ msvc/vc9/zark.ncb
 msvc/vc9/zark.suo
 msvc/vc9/*.vcproj.*.user
 msvc/vc9/~AutoRecover*
+build/
