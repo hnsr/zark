@@ -478,7 +478,7 @@ static int zConsoleSet(lua_State *L)
     switch (var->type) {
 
         case Z_VAR_TYPE_INT:
-            zVarSetInt(var, luaL_checkint(L, 2));
+            zVarSetInt(var, luaL_checkinteger(L, 2));
             break;
 
         case Z_VAR_TYPE_FLOAT:
@@ -575,7 +575,7 @@ static int zConsoleIncrease(lua_State *L)
 
         case Z_VAR_TYPE_INT:
             if (lua_gettop(L) > 1)
-                zVarSetInt(var, *(int *)var->varptr + luaL_checkint(L, 2));
+                zVarSetInt(var, *(int *)var->varptr + luaL_checkinteger(L, 2));
             else
                 zVarSetInt(var, *(int *)var->varptr + 1);
             break;
@@ -612,7 +612,7 @@ static int zConsoleDecrease(lua_State *L)
 
         case Z_VAR_TYPE_INT:
             if (lua_gettop(L) > 1)
-                zVarSetInt(var, *(int *)var->varptr - luaL_checkint(L, 2));
+                zVarSetInt(var, *(int *)var->varptr - luaL_checkinteger(L, 2));
             else
                 zVarSetInt(var, *(int *)var->varptr - 1);
             break;

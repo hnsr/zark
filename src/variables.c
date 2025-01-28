@@ -156,7 +156,7 @@ static int zLuaSet(lua_State *L)
             {
                 unsigned int count = 0, elems = (var->type == Z_VAR_TYPE_FLOAT3 ? 3 : 4);
 
-                if (!lua_istable(L, 2) || lua_objlen(L, 2) != elems) {
+                if (!lua_istable(L, 2) || lua_rawlen(L, 2) != elems) {
                     zWarning("Failed to set variable \"%s\", value should be a table of %d"
                         " numbers.", var->name, elems);
                     break;
