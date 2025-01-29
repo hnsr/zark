@@ -213,13 +213,6 @@ static int zParseVariables(const char *filename, const char *prefix, int flags)
     lua_call(L, 0, 0);
     lua_register(L, "set", zLuaSet);
 
-    // Some glue so user can just set globals instead of having to call set() itself, this also
-    // creates an empty environment.
-    zLua(L, "new_env = {}\n"
-            "setmetatable(new_env, { __newindex = function (t,k,v) set(k,v) end })\n"
-            "setfenv(0, new_env)\n");
-    //  ^ Fixme: this is no longer allowed in lua 5.2
-
     if (luaL_dofile(L, path)) {
         zWarning("Failed to parse variables: %s", lua_tostring(L, -1));
         lua_close(L);
@@ -301,29 +294,29 @@ void zSaveConfig(void)
             switch (var->type) {
 
                 case Z_VAR_TYPE_INT:
-                    fprintf(fp, "%-16s = %-12d -- %s\n", var->name, *(int *)var->varptr,
+                    fprintf(fp, "set(\"%s\", %d) -- %s\n", var->name, *(int *)var->varptr,
                         var->description);
                     break;
 
                 case Z_VAR_TYPE_FLOAT:
-                    fprintf(fp, "%-16s = %-12f -- %s\n", var->name, *(float *)var->varptr,
+                    fprintf(fp, "set(\"%s\", %f) -- %s\n", var->name, *(float *)var->varptr,
                         var->description);
                     break;
 
                 case Z_VAR_TYPE_FLOAT3:
                     vec = (float *)var->varptr;
-                    fprintf(fp, "%-16s = { %f, %f, %f } -- %s\n", var->name, vec[0], vec[1], vec[2],
+                    fprintf(fp, "set(\"%s\", { %f, %f, %f }) -- %s\n", var->name, vec[0], vec[1], vec[2],
                         var->description);
                     break;
 
                 case Z_VAR_TYPE_FLOAT4:
                     vec = (float *)var->varptr;
-                    fprintf(fp, "%-16s = { %f, %f, %f, %f } -- %s\n", var->name,
+                    fprintf(fp, "set(\"%s\", { %f, %f, %f, %f }) -- %s\n", var->name,
                         vec[0], vec[1], vec[2], vec[3], var->description);
                     break;
 
                 case Z_VAR_TYPE_STRING:
-                    fprintf(fp, "%-16s = \"%s\" -- %s\n", var->name, (char *)var->varptr,
+                    fprintf(fp, "set(\"%s\", \"%s\") -- %s\n", var->name, (char *)var->varptr,
                         var->description);
                     break;
 
