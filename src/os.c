@@ -493,7 +493,10 @@ void zProcessEvents(void)
         XNextEvent(dpy, &event);
 
         // Filter events for input method when doing text input.
-        if ( text_input && XFilterEvent(&event, wnd) ) return;
+        // FIXME: I disabled this line because XFilterEvent was always returning true, breaking
+        //  text input entirely. Normally, you need XfilterEvent to avoid issues like
+        //  https://github.com/alacritty/alacritty/issues/211
+        //if ( text_input && XFilterEvent(&event, wnd) ) return;
 
         switch (event.type) {
 
